@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::PgConnection;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
@@ -17,6 +19,7 @@ impl TripleStore {
     pub fn new(database_url: &str) -> Result<Self, StoreError> {
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder()
+            .connection_timeout(Duration::from_secs(10))
             .max_size(10)
             .min_idle(Some(1))
             .build(manager)
