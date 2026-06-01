@@ -10,3 +10,4 @@ dotenvy = "0.15.7"
 log = "0.4.30"
 oxrdf = { version = "0.3.3", features = ["rdf-12"] }
 oxttl = { version = "0.2.3", features = ["rdf-12"] }
+spargebra = { version = "0.4.6", features = ["sparql-12"] }
