@@ -10,6 +10,7 @@ pub enum StoreError {
     DataError(String),
     ConnectionError(String),
     MigrationError(String),
+    SparqlSyntaxError(String),
     UnsupportedInputData,
 }
 
@@ -28,5 +29,11 @@ impl From<diesel::r2d2::Error> for StoreError {
 impl From<diesel::r2d2::PoolError> for StoreError {
     fn from(value: diesel::r2d2::PoolError) -> Self {
         StoreError::ConnectionError(value.to_string())
+    }
+}
+
+impl From<spargebra::SparqlSyntaxError> for StoreError {
+    fn from(value: spargebra::SparqlSyntaxError) -> Self {
+        StoreError::SparqlSyntaxError(value.to_string())
     }
 }

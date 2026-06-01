@@ -30,3 +30,22 @@ pub enum TripleQueryResult {
         literal_type: Option<String>,
     },
 }
+
+impl TripleQueryResult {
+    pub fn relation(values: (String, String, String)) -> Self {
+        Self::Relation {
+            subject: values.0,
+            predicate: values.1,
+            object: values.2,
+        }
+    }
+
+    pub fn property(values: (String, String, String)) -> Self {
+        Self::Property {
+            subject: values.0,
+            predicate: values.1,
+            literal_value: values.2,
+            literal_type: None,
+        }
+    }
+}

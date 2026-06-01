@@ -79,31 +79,8 @@ impl TripleStore {
         query: TripleQuery,
     ) -> Result<Vec<TripleQueryResult>, StoreError> {
         match query {
-            TripleQuery::Relation(query) => {
-                let rows = self.query_relation_triples_joined(query)?;
-
-                Ok(rows
-                    .into_iter()
-                    .map(|row| TripleQueryResult::Relation {
-                        subject: row.0,
-                        predicate: row.1,
-                        object: row.2,
-                    })
-                    .collect())
-            }
-            TripleQuery::Property(query) => {
-                let rows = self.query_property_triples_joined(query)?;
-
-                Ok(rows
-                    .into_iter()
-                    .map(|row| TripleQueryResult::Property {
-                        subject: row.0,
-                        predicate: row.1,
-                        literal_value: row.2,
-                        literal_type: None,
-                    })
-                    .collect())
-            }
+            TripleQuery::Relation(query) => self.query_relation_triples_joined(query),
+            TripleQuery::Property(query) => self.query_property_triples_joined(query)
         }
     }
 }

@@ -1,4 +1,5 @@
 use crate::db::models::relation::{Relation, RelationTripleQuery};
+use crate::db::models::triple::TripleQueryResult;
 use crate::store::TripleStore;
 use crate::StoreError;
 use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -55,7 +56,7 @@ impl TripleStore {
     pub fn query_relation_triples_joined(
         &mut self,
         query: RelationTripleQuery,
-    ) -> Result<Vec<(String, String, String)>, StoreError> {
+    ) -> Result<Vec<TripleQueryResult>, StoreError> {
         use crate::schema::objects;
         use crate::schema::predicates;
         use crate::schema::relations;
@@ -101,6 +102,12 @@ impl TripleStore {
             )
         }
 
-        Ok(relation_query.load::<(String, String, String)>(&mut conn)?)
+        let result = relation_query.load::<(String, String, String)>(&mut conn)?;
+        Ok(result
+            .into_iter()
+            .map(TripleQueryResult::relation)
+            .collect())
+
+        //Ok(relation_query.load::<(String, String, String)>(&mut conn)?)
     }
 }

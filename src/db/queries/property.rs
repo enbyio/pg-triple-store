@@ -3,6 +3,7 @@ use log::{debug, info};
 use oxrdf::Literal;
 
 use crate::db::models::property::{LiteralMatchMode, Property, PropertyTripleQuery};
+use crate::db::models::triple::TripleQueryResult;
 use crate::store::TripleStore;
 use crate::StoreError;
 
@@ -60,7 +61,7 @@ impl TripleStore {
     pub fn query_property_triples_joined(
         &mut self,
         query: PropertyTripleQuery,
-    ) -> Result<Vec<(String, String, String)>, StoreError> {
+    ) -> Result<Vec<TripleQueryResult>, StoreError> {
         use crate::schema::objects;
         use crate::schema::predicates;
         use crate::schema::properties;
@@ -90,6 +91,10 @@ impl TripleStore {
             };
         }
 
-        Ok(property_query.load::<(String, String, String)>(&mut conn)?)
+        let result = property_query.load::<(String, String, String)>(&mut conn)?;
+        Ok(result
+            .into_iter()
+            .map(TripleQueryResult::property)
+            .collect())
     }
 }
