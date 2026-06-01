@@ -37,3 +37,9 @@ impl From<spargebra::SparqlSyntaxError> for StoreError {
         StoreError::SparqlSyntaxError(value.to_string())
     }
 }
+
+impl From<reqwest::Error> for StoreError {
+    fn from(value: reqwest::Error) -> Self {
+        StoreError::ConnectionError(format!("Reqwest Error: {}", value))
+    }
+}

@@ -24,4 +24,14 @@ impl TripleStore {
         info!("Found {} triples", triples.len());
         self.batch_upsert_triples(&triples)
     }
+
+    pub fn import_turtle_from_url(&mut self, url: String) -> Result<(), StoreError> {
+        let client = reqwest::blocking::Client::new();
+        let content = client
+            .get(url)
+            .header("Accept", "text/turtle")
+            .send()?
+            .text()?;
+        self.import_turtle_data(content)
+    }
 }
