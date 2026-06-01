@@ -8,6 +8,7 @@ use crate::db::models::object::NewObject;
 use crate::db::models::predicate::NewPredicate;
 use crate::db::models::property::Property;
 use crate::db::models::relation::Relation;
+use crate::db::models::triple::{TripleQuery, TripleQueryResult};
 use crate::store::TripleStore;
 
 impl TripleStore {
@@ -71,5 +72,38 @@ impl TripleStore {
         self.batch_create_relation_triple(&relations)?;
         self.batch_create_property_triple(&properties)?;
         Ok(())
+    }
+
+    pub fn query_triples(
+        &mut self,
+        query: TripleQuery,
+    ) -> Result<Vec<TripleQueryResult>, StoreError> {
+        match query {
+            TripleQuery::Relation(query) => {
+                let rows = self.query_relation_triples_joined(query)?;
+
+                Ok(rows
+                    .into_iter()
+                    .map(|row| TripleQueryResult::Relation {
+                        subject: row.0,
+                        predicate: row.1,
+                        object: row.2,
+                    })
+                    .collect())
+            }
+            TripleQuery::Property(query) => {
+                let rows = self.query_property_triples_joined(query)?;
+
+                Ok(rows
+                    .into_iter()
+                    .map(|row| TripleQueryResult::Property {
+                        subject: row.0,
+                        predicate: row.1,
+                        literal_value: row.2,
+                        literal_type: None,
+                    })
+                    .collect())
+            }
+        }
     }
 }

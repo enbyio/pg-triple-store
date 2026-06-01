@@ -30,7 +30,7 @@ impl Property {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq)]
 pub enum LiteralMatchMode {
     #[default]
     Exact,
