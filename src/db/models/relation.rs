@@ -1,6 +1,6 @@
-use diesel::Selectable;
 use diesel::deserialize::Queryable;
 use diesel::prelude::Insertable;
+use diesel::Selectable;
 
 use crate::schema::relations;
 
@@ -24,9 +24,9 @@ impl Relation {
 }
 
 pub struct RelationTripleQuery {
-    subject: Option<String>,
-    predicate: Option<String>,
-    object: Option<String>,
+    pub(crate) subject: Option<String>,
+    pub(crate) predicate: Option<String>,
+    pub(crate) object: Option<String>,
 }
 
 impl RelationTripleQuery {

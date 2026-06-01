@@ -1,4 +1,4 @@
-use diesel::{ExpressionMethods, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use log::{debug, info};
 use oxrdf::Literal;
 
@@ -55,5 +55,44 @@ impl TripleStore {
             affected_rows
         );
         Ok(())
+    }
+
+    pub fn query_property_triples_joined(
+        &mut self,
+        subject: Option<String>,
+        predicate: Option<String>,
+        literal_value: Option<String>,
+        exact_match: bool,
+    ) -> Result<Vec<(String, String, String)>, StoreError> {
+        use crate::schema::objects;
+        use crate::schema::predicates;
+        use crate::schema::properties;
+
+        let mut conn = self.conn()?;
+
+        let mut property_query = properties::table
+            .inner_join(objects::table.on(properties::subject.eq(objects::id)))
+            .inner_join(predicates::table.on(properties::predicate.eq(predicates::id)))
+            .select((objects::iri, predicates::iri, properties::literal_value))
+            .into_boxed();
+        if let Some(subject_iri) = subject {
+            property_query = property_query.filter(objects::iri.eq(format!("<{subject_iri}>")));
+        }
+
+        if let Some(predicate_iri) = predicate {
+            property_query =
+                property_query.filter(predicates::iri.eq(format!("<{predicate_iri}>")));
+        }
+
+        if let Some(value) = literal_value {
+            property_query = if exact_match {
+                property_query.filter(properties::literal_value.eq(value))
+            } else {
+                let pattern = format!("%{value}%");
+                property_query.filter(properties::literal_value.like(pattern))
+            };
+        }
+
+        Ok(property_query.load::<(String, String, String)>(&mut conn)?)
     }
 }

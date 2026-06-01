@@ -1,6 +1,6 @@
-use diesel::Selectable;
 use diesel::deserialize::Queryable;
 use diesel::prelude::Insertable;
+use diesel::Selectable;
 
 use crate::schema::properties;
 
@@ -39,10 +39,10 @@ pub enum LiteralMatchMode {
 
 #[derive(Default)]
 pub struct PropertyTripleQuery {
-    subject: Option<String>,
-    predicate: Option<String>,
-    literal_value: Option<String>,
-    literal_match_mode: LiteralMatchMode,
+    pub(crate) subject: Option<String>,
+    pub(crate) predicate: Option<String>,
+    pub(crate) literal_value: Option<String>,
+    pub(crate) literal_match_mode: LiteralMatchMode,
 }
 
 impl PropertyTripleQuery {
