@@ -33,11 +33,16 @@ impl TripleStore {
     }
 
     pub fn get_short_form(&self, iri: String) -> Result<String, StoreError> {
+        let mut trimmed = iri.trim();
+        if trimmed.starts_with('<') && trimmed.ends_with('>') {
+            trimmed = &trimmed[1..trimmed.len() - 1];
+        }
         let mut conn = self.conn()?;
-        let split_pos = iri.rfind(['#', '/']).ok_or(StoreError::DataError(
+        let split_pos = trimmed.rfind(['#', '/']).ok_or(StoreError::DataError(
             "failed to find # or / absolute iri seems to be invalid".to_string(),
         ))?;
-        let (long_prefix, value) = (&iri[..=split_pos], &iri[split_pos + 1..]);
+        let (long_prefix, value) = (&trimmed[..=split_pos], &trimmed[split_pos + 1..]);
+        println!("{long_prefix} {value}");
         let short_namespace = prefixes
             .filter(namespace.eq(long_prefix))
             .select(prefix)

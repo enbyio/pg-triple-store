@@ -25,7 +25,7 @@ impl TripleStore {
         self.batch_upsert_triples(&triples)
     }
 
-    pub fn import_turtle_from_url(&mut self, url: String) -> Result<(), StoreError> {
+    pub fn import_turtle_from_url(&mut self, url: &str) -> Result<(), StoreError> {
         let client = reqwest::blocking::Client::new();
         let content = client
             .get(url)
