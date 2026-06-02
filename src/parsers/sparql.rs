@@ -46,14 +46,16 @@ impl TripleStore {
     ) -> Result<Vec<TripleQueryResult>, StoreError> {
         // Map SPARQL Subject (Variable or NamedNode) to Option<String>
         let s = match tp.subject {
-            spargebra::term::TermPattern::NamedNode(named_node) => Some(named_node.to_string()),
+            spargebra::term::TermPattern::NamedNode(named_node) => {
+                Some(self.normalize_iri(named_node.as_str())?)
+            }
             _ => None,
         };
 
         // Map SPARQL Predicate to Option<String>
         let p = match tp.predicate {
             spargebra::term::NamedNodePattern::NamedNode(named_node) => {
-                Some(named_node.to_string())
+                Some(self.normalize_iri(named_node.as_str())?)
             }
             _ => None,
         };
@@ -61,7 +63,7 @@ impl TripleStore {
         // Map SPARQL Object
         match tp.object {
             spargebra::term::TermPattern::NamedNode(nn) => self.query_relation_triples_joined(
-                RelationTripleQuery::with_values(s, p, Some(nn.to_string())),
+                RelationTripleQuery::with_values(s, p, Some(self.normalize_iri(nn.as_str())?)),
             ),
             spargebra::term::TermPattern::Literal(literal) => {
                 self.query_property_triples_joined(PropertyTripleQuery::with_values(
