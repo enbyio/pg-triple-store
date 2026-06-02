@@ -4,6 +4,7 @@ use spargebra::term::TriplePattern;
 use spargebra::{Query, SparqlParser};
 
 use crate::db::models::property::{LiteralMatchMode, PropertyTripleQuery};
+use crate::db::models::query::QueryOptions;
 use crate::db::models::relation::RelationTripleQuery;
 use crate::db::models::triple::TripleQueryResult;
 use crate::store::TripleStore;
@@ -47,7 +48,7 @@ impl TripleStore {
         let parser = SparqlParser::new();
         let query = parser.parse_query(&self.inject_prefixes(sparql)?.to_string())?;
         match query {
-            Query::Select { pattern, .. } => self.execute_pattern(pattern),
+            Query::Select { pattern, .. } => self.execute_pattern(pattern, QueryOptions::default()),
             Query::Construct { .. } => Err(UnsupportedInputData),
             Query::Describe { .. } => Err(UnsupportedInputData),
             Query::Ask { .. } => Err(UnsupportedInputData),
@@ -72,21 +73,37 @@ impl TripleStore {
     fn execute_pattern(
         &mut self,
         pattern: GraphPattern,
+        options: QueryOptions,
     ) -> Result<Vec<TripleQueryResult>, StoreError> {
         match pattern {
             GraphPattern::Bgp { patterns } => {
                 let mut all_results = Vec::new();
                 for tp in patterns {
-                    let results = self.execute_triple_pattern(tp)?;
+                    let results = self.execute_triple_pattern(tp, options)?;
                     all_results.extend(results);
                 }
                 Ok(all_results)
             }
-            GraphPattern::Project { inner, .. } => self.execute_pattern(*inner),
-            GraphPattern::Distinct { inner } => self.execute_pattern(*inner),
-            GraphPattern::Slice { inner, .. } => self.execute_pattern(*inner),
-            GraphPattern::OrderBy { inner, .. } => self.execute_pattern(*inner),
-            GraphPattern::Filter { inner, .. } => self.execute_pattern(*inner),
+            GraphPattern::Project { inner, .. } => self.execute_pattern(*inner, options),
+            GraphPattern::Distinct { inner } => self.execute_pattern(*inner, options),
+            GraphPattern::Slice {
+                inner,
+                start,
+                length,
+            } => {
+                let new_mods = QueryOptions {
+                    offset: options.offset.saturating_add(start),
+                    limit: match (options.limit, length) {
+                        (None, Some(l)) => Some(l),
+                        (Some(existing), Some(l)) => Some(existing.min(l)),
+                        (Some(existing), None) => Some(existing),
+                        (None, None) => None,
+                    },
+                };
+                self.execute_pattern(*inner, new_mods)
+            }
+            GraphPattern::OrderBy { inner, .. } => self.execute_pattern(*inner, options),
+            GraphPattern::Filter { inner, .. } => self.execute_pattern(*inner, options),
             _ => Err(UnsupportedInputData),
         }
     }
@@ -94,6 +111,7 @@ impl TripleStore {
     fn execute_triple_pattern(
         &mut self,
         tp: TriplePattern,
+        options: QueryOptions,
     ) -> Result<Vec<TripleQueryResult>, StoreError> {
         // Map SPARQL Subject (Variable or NamedNode) to Option<String>
         let s = match tp.subject {
@@ -115,28 +133,31 @@ impl TripleStore {
         match tp.object {
             spargebra::term::TermPattern::NamedNode(nn) => self.query_relation_triples_joined(
                 RelationTripleQuery::with_values(s, p, Some(self.normalize_iri(nn.as_str())?)),
+                options,
             ),
-            spargebra::term::TermPattern::Literal(literal) => {
-                self.query_property_triples_joined(PropertyTripleQuery::with_values(
+            spargebra::term::TermPattern::Literal(literal) => self.query_property_triples_joined(
+                PropertyTripleQuery::with_values(
                     s,
                     p,
                     Some(literal.to_string()),
                     LiteralMatchMode::Exact,
-                ))
-            }
+                ),
+                options,
+            ),
             spargebra::term::TermPattern::Variable(_) => {
-                let mut results =
-                    self.query_property_triples_joined(PropertyTripleQuery::with_values(
+                let mut results = self.query_property_triples_joined(
+                    PropertyTripleQuery::with_values(
                         s.clone(),
                         p.clone(),
                         None,
                         LiteralMatchMode::Exact,
-                    ))?;
-                results.extend(
-                    self.query_relation_triples_joined(RelationTripleQuery::with_values(
-                        s, p, None,
-                    ))?,
-                );
+                    ),
+                    options,
+                )?;
+                results.extend(self.query_relation_triples_joined(
+                    RelationTripleQuery::with_values(s, p, None),
+                    options,
+                )?);
                 Ok(results)
             }
             _ => Err(UnsupportedInputData),

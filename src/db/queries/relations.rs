@@ -1,3 +1,4 @@
+use crate::db::models::query::QueryOptions;
 use crate::db::models::relation::{Relation, RelationTripleQuery};
 use crate::db::models::triple::TripleQueryResult;
 use crate::store::TripleStore;
@@ -56,6 +57,7 @@ impl TripleStore {
     pub fn query_relation_triples_joined(
         &mut self,
         query: RelationTripleQuery,
+        options: QueryOptions,
     ) -> Result<Vec<TripleQueryResult>, StoreError> {
         use crate::schema::objects;
         use crate::schema::predicates;
@@ -100,6 +102,13 @@ impl TripleStore {
                     .field(objects::iri)
                     .eq(format!("<{object_iri}>")),
             )
+        }
+
+        if let Some(lim) = options.limit {
+            relation_query = relation_query.limit(lim as i64);
+        }
+        if options.offset > 0 {
+            relation_query = relation_query.offset(options.offset as i64);
         }
 
         let result = relation_query.load::<(String, String, String)>(&mut conn)?;

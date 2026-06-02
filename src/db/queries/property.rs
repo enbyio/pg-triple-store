@@ -1,8 +1,12 @@
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::pg::Pg;
+use diesel::{
+    debug_query, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods,
+};
 use log::{debug, info};
 use oxrdf::Literal;
 
 use crate::db::models::property::{LiteralMatchMode, Property, PropertyTripleQuery};
+use crate::db::models::query::QueryOptions;
 use crate::db::models::triple::TripleQueryResult;
 use crate::store::TripleStore;
 use crate::StoreError;
@@ -61,6 +65,7 @@ impl TripleStore {
     pub fn query_property_triples_joined(
         &mut self,
         query: PropertyTripleQuery,
+        options: QueryOptions,
     ) -> Result<Vec<TripleQueryResult>, StoreError> {
         use crate::schema::objects;
         use crate::schema::predicates;
@@ -89,6 +94,13 @@ impl TripleStore {
                 let pattern = format!("%{value}%");
                 property_query.filter(properties::literal_value.like(pattern))
             };
+        }
+
+        if let Some(lim) = options.limit {
+            property_query = property_query.limit(lim as i64);
+        }
+        if options.offset > 0 {
+            property_query = property_query.offset(options.offset as i64);
         }
 
         let result = property_query.load::<(String, String, String)>(&mut conn)?;
