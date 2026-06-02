@@ -42,7 +42,6 @@ impl TripleStore {
             "failed to find # or / absolute iri seems to be invalid".to_string(),
         ))?;
         let (long_prefix, value) = (&trimmed[..=split_pos], &trimmed[split_pos + 1..]);
-        println!("{long_prefix} {value}");
         let short_namespace = prefixes
             .filter(namespace.eq(long_prefix))
             .select(prefix)

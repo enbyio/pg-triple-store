@@ -1,7 +1,4 @@
-use diesel::pg::Pg;
-use diesel::{
-    debug_query, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods,
-};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use log::{debug, info};
 use oxrdf::Literal;
 

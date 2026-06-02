@@ -16,7 +16,7 @@ impl TripleQuery {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TripleQueryResult {
     Relation {
         subject: String,

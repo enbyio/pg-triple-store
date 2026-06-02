@@ -130,7 +130,7 @@ impl TripleStore {
         };
 
         // Map SPARQL Object
-        match tp.object {
+        let res = match tp.object {
             spargebra::term::TermPattern::NamedNode(nn) => self.query_relation_triples_joined(
                 RelationTripleQuery::with_values(s, p, Some(self.normalize_iri(nn.as_str())?)),
                 options,
@@ -161,6 +161,11 @@ impl TripleStore {
                 Ok(results)
             }
             _ => Err(UnsupportedInputData),
+        }?;
+        if let Some(lim) = options.limit {
+            Ok(res[0..lim].to_vec())
+        } else {
+            Ok(res)
         }
     }
 }
