@@ -9,16 +9,16 @@ use crate::db::models::predicate::NewPredicate;
 use crate::db::models::property::Property;
 use crate::db::models::query::QueryOptions;
 use crate::db::models::relation::Relation;
-use crate::db::models::triple::{TripleQuery, TripleQueryResult};
+use crate::db::models::triple::{AsIri, TripleQuery, TripleQueryResult};
 use crate::store::TripleStore;
 
 impl TripleStore {
     pub fn upsert_triple(&mut self, triple: Triple) -> Result<(), StoreError> {
-        let subject_id = self.upsert_object(triple.subject.to_string())?;
-        let predicate_id = self.upsert_predicate(triple.predicate.to_string())?;
+        let subject_id = self.upsert_object(triple.subject.as_iri()?)?;
+        let predicate_id = self.upsert_predicate(triple.predicate.as_str())?;
         match triple.object {
             oxrdf::Term::NamedNode(named_node) => {
-                let object_id = self.upsert_object(named_node.to_string())?;
+                let object_id = self.upsert_object(named_node.as_str().to_string())?;
                 self.create_relation_triple(subject_id, predicate_id, object_id)
             }
             oxrdf::Term::BlankNode(_) => {
@@ -39,10 +39,10 @@ impl TripleStore {
         let mut predicates: HashSet<NewPredicate> = HashSet::new();
         let mut objects: HashSet<NewObject> = HashSet::new();
         for triple in triples {
-            objects.insert(triple.subject.to_string().into());
-            predicates.insert(triple.predicate.to_string().into());
+            objects.insert(triple.subject.as_iri()?.into());
+            predicates.insert(triple.predicate.as_str().into());
             if let Term::NamedNode(val) = &triple.object {
-                objects.insert(val.to_string().into());
+                objects.insert(val.as_str().to_string().into());
             }
         }
         info!("Found {} unique objects", objects.len());
@@ -52,12 +52,12 @@ impl TripleStore {
         let mut relations: Vec<Relation> = Vec::new();
         let mut properties: Vec<Property> = Vec::new();
         for triple in triples {
-            if let Some(&subject) = object_ids.get(&triple.subject.to_string())
-                && let Some(&predicate) = predicate_ids.get(&triple.predicate.to_string())
+            if let Some(&subject) = object_ids.get(triple.subject.as_iri()?)
+                && let Some(&predicate) = predicate_ids.get(triple.predicate.as_str())
             {
                 match &triple.object {
                     Term::NamedNode(named_node) => {
-                        if let Some(&object) = object_ids.get(&named_node.to_string()) {
+                        if let Some(&object) = object_ids.get(named_node.as_str()) {
                             relations.push(Relation::new(subject, predicate, object));
                         } else {
                             error!("could not find id for the iri {}", named_node)

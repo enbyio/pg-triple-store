@@ -83,25 +83,18 @@ impl TripleStore {
 
         if let Some(subject_iri) = query.subject {
             println!("subject is {subject_iri}");
-            relation_query = relation_query.filter(
-                subject_objects
-                    .field(objects::iri)
-                    .eq(format!("<{subject_iri}>")),
-            );
+            relation_query =
+                relation_query.filter(subject_objects.field(objects::iri).eq(subject_iri));
         }
 
         if let Some(predicate_iri) = query.predicate {
-            println!("predicate is {predicate_iri}");
-            relation_query = relation_query.filter(predicates::iri.eq(format!("<{predicate_iri}>")))
+            relation_query = relation_query.filter(predicates::iri.eq(predicate_iri))
         }
 
         if let Some(object_iri) = query.object {
             println!("object is {object_iri}");
-            relation_query = relation_query.filter(
-                object_objects
-                    .field(objects::iri)
-                    .eq(format!("<{object_iri}>")),
-            )
+            relation_query =
+                relation_query.filter(object_objects.field(objects::iri).eq(object_iri))
         }
 
         if let Some(lim) = options.limit {

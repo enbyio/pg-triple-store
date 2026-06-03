@@ -76,12 +76,11 @@ impl TripleStore {
             .select((objects::iri, predicates::iri, properties::literal_value))
             .into_boxed();
         if let Some(subject_iri) = query.subject {
-            property_query = property_query.filter(objects::iri.eq(format!("<{subject_iri}>")));
+            property_query = property_query.filter(objects::iri.eq(subject_iri));
         }
 
         if let Some(predicate_iri) = query.predicate {
-            property_query =
-                property_query.filter(predicates::iri.eq(format!("<{predicate_iri}>")));
+            property_query = property_query.filter(predicates::iri.eq(predicate_iri));
         }
 
         if let Some(value) = query.literal_value {

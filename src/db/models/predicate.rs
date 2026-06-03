@@ -25,8 +25,8 @@ impl NewPredicate {
     }
 }
 
-impl From<String> for NewPredicate {
-    fn from(value: String) -> Self {
-        Self::new(value)
+impl From<&str> for NewPredicate {
+    fn from(value: &str) -> Self {
+        Self::new(value.to_string())
     }
 }

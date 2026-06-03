@@ -32,21 +32,33 @@ impl TripleStore {
         Ok(format!("{}{}", long_prefix, short_prefix.1))
     }
 
-    pub fn get_short_form(&self, iri: String) -> Result<String, StoreError> {
-        let mut trimmed = iri.trim();
-        if trimmed.starts_with('<') && trimmed.ends_with('>') {
-            trimmed = &trimmed[1..trimmed.len() - 1];
-        }
+    pub fn get_all_prefixes(&mut self) -> Result<Vec<(String, String)>, StoreError> {
         let mut conn = self.conn()?;
-        let split_pos = trimmed.rfind(['#', '/']).ok_or(StoreError::DataError(
-            "failed to find # or / absolute iri seems to be invalid".to_string(),
-        ))?;
-        let (long_prefix, value) = (&trimmed[..=split_pos], &trimmed[split_pos + 1..]);
-        let short_namespace = prefixes
-            .filter(namespace.eq(long_prefix))
-            .select(prefix)
-            .first::<String>(&mut conn)?;
-        Ok(format!("{}:{}", short_namespace, value))
+        Ok(prefixes.select((namespace, prefix))
+            .load::<(String, String)>(&mut conn)?)
+    }
+
+    pub fn shorten_iri(&mut self, iri: String) -> Result<String, StoreError> {
+        let mut best: Option<(String, String)> = None;
+        let mut longest_fit: usize = 0;
+        for (ns, pfx) in self.get_all_prefixes()? {
+            if iri.starts_with(ns.as_str())
+                && ns.len() > longest_fit {
+                    best = Some((ns.clone(), pfx.clone()));
+                        longest_fit = ns.len();
+                }
+        }
+        Ok(match best {
+            Some((ns, pfx)) => {
+                let local = &iri[ns.len()..];
+                if local.is_empty() {
+                    iri
+                } else {
+                    format!("{}:{}", pfx, local)
+                }
+            }
+            None => iri.to_string(),
+        })
     }
 
     pub(crate) fn normalize_iri(&self, raw_iri: &str) -> Result<String, StoreError> {

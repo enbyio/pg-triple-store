@@ -1,5 +1,8 @@
+use oxrdf::NamedOrBlankNode;
+
 use crate::db::models::property::PropertyTripleQuery;
 use crate::db::models::relation::RelationTripleQuery;
+use crate::StoreError;
 
 pub enum TripleQuery {
     Relation(RelationTripleQuery),
@@ -46,6 +49,19 @@ impl TripleQueryResult {
             predicate: values.1,
             literal_value: values.2,
             literal_type: None,
+        }
+    }
+}
+
+pub trait AsIri {
+    fn as_iri(&self) -> Result<&str, StoreError>;
+}
+
+impl AsIri for NamedOrBlankNode {
+    fn as_iri(&self) -> Result<&str, StoreError> {
+        match self {
+            NamedOrBlankNode::NamedNode(named_node) => Ok(named_node.as_str()),
+            NamedOrBlankNode::BlankNode(_) => Err(StoreError::UnsupportedInputData),
         }
     }
 }

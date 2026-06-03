@@ -12,6 +12,7 @@ use crate::StoreError::{self, UnsupportedInputData};
 
 impl TripleStore {
     pub fn print_sparql_result(&mut self, sparql: &str) -> Result<(), StoreError> {
+        println!("SPARQL Result:");
         for triple in self.parse_sparql_query(sparql)? {
             match triple {
                 TripleQueryResult::Relation {
@@ -20,9 +21,9 @@ impl TripleStore {
                     object,
                 } => println!(
                     "{} {} {}",
-                    self.get_short_form(subject)?,
-                    self.get_short_form(predicate)?,
-                    self.get_short_form(object)?
+                    self.shorten_iri(subject)?,
+                    self.shorten_iri(predicate)?,
+                    self.shorten_iri(object)?
                 ),
                 TripleQueryResult::Property {
                     subject,
@@ -31,8 +32,8 @@ impl TripleStore {
                     ..
                 } => println!(
                     "{} {} {}",
-                    self.get_short_form(subject)?,
-                    self.get_short_form(predicate)?,
+                    self.shorten_iri(subject)?,
+                    self.shorten_iri(predicate)?,
                     literal_value
                 ),
             }

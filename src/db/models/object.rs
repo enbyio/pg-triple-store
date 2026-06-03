@@ -30,3 +30,9 @@ impl From<String> for NewObject {
         Self::new(value)
     }
 }
+
+impl From<&str> for NewObject {
+    fn from(value: &str) -> Self {
+        Self::new(value.to_string())
+    }
+}
