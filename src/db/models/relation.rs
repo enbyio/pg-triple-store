@@ -2,6 +2,7 @@ use diesel::deserialize::Queryable;
 use diesel::prelude::Insertable;
 use diesel::Selectable;
 
+use crate::db::models::triple::TriplePosition;
 use crate::schema::relations;
 
 #[derive(Insertable, Queryable, Selectable, Debug, Default)]
@@ -24,36 +25,21 @@ impl Relation {
 }
 
 pub struct RelationTripleQuery {
-    pub(crate) subject: Option<String>,
-    pub(crate) predicate: Option<String>,
-    pub(crate) object: Option<String>,
+    pub(crate) subject: TriplePosition,
+    pub(crate) predicate: TriplePosition,
+    pub(crate) object: TriplePosition,
 }
 
 impl RelationTripleQuery {
     pub fn with_values(
-        subject: Option<String>,
-        predicate: Option<String>,
-        object: Option<String>,
+        subject: TriplePosition,
+        predicate: TriplePosition,
+        object: TriplePosition,
     ) -> Self {
         Self {
             subject,
             predicate,
             object,
         }
-    }
-
-    pub fn subject(mut self, subject: String) -> Self {
-        self.subject = Some(subject);
-        self
-    }
-
-    pub fn predicate(mut self, predicate: String) -> Self {
-        self.predicate = Some(predicate);
-        self
-    }
-
-    pub fn object(mut self, object: String) -> Self {
-        self.object = Some(object);
-        self
     }
 }

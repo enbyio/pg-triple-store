@@ -2,6 +2,7 @@ use diesel::deserialize::Queryable;
 use diesel::prelude::Insertable;
 use diesel::Selectable;
 
+use crate::db::models::triple::TriplePosition;
 use crate::schema::properties;
 
 #[derive(Insertable, Queryable, Selectable, Debug)]
@@ -37,19 +38,18 @@ pub enum LiteralMatchMode {
     Contains,
 }
 
-#[derive(Default)]
 pub struct PropertyTripleQuery {
-    pub(crate) subject: Option<String>,
-    pub(crate) predicate: Option<String>,
-    pub(crate) literal_value: Option<String>,
+    pub(crate) subject: TriplePosition,
+    pub(crate) predicate: TriplePosition,
+    pub(crate) literal_value: TriplePosition,
     pub(crate) literal_match_mode: LiteralMatchMode,
 }
 
 impl PropertyTripleQuery {
     pub fn with_values(
-        subject: Option<String>,
-        predicate: Option<String>,
-        literal_value: Option<String>,
+        subject: TriplePosition,
+        predicate: TriplePosition,
+        literal_value: TriplePosition,
         literal_match_mode: LiteralMatchMode,
     ) -> Self {
         Self {
@@ -58,25 +58,5 @@ impl PropertyTripleQuery {
             literal_value,
             literal_match_mode,
         }
-    }
-
-    pub fn subject(mut self, subject: String) -> Self {
-        self.subject = Some(subject);
-        self
-    }
-
-    pub fn predicate(mut self, predicate: String) -> Self {
-        self.predicate = Some(predicate);
-        self
-    }
-
-    pub fn literal_value(mut self, literal_value: String) -> Self {
-        self.literal_value = Some(literal_value);
-        self
-    }
-
-    pub fn match_mode(mut self, mode: LiteralMatchMode) -> Self {
-        self.literal_match_mode = mode;
-        self
     }
 }

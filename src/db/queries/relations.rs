@@ -1,6 +1,5 @@
-use crate::db::models::query::QueryOptions;
+use crate::db::models::query::{QueryOptions, Solution, SolutionBuilder};
 use crate::db::models::relation::{Relation, RelationTripleQuery};
-use crate::db::models::triple::TripleQueryResult;
 use crate::store::TripleStore;
 use crate::StoreError;
 use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -58,12 +57,14 @@ impl TripleStore {
         &mut self,
         query: RelationTripleQuery,
         options: QueryOptions,
-    ) -> Result<Vec<TripleQueryResult>, StoreError> {
+    ) -> Result<Vec<Solution>, StoreError> {
         use crate::schema::objects;
         use crate::schema::predicates;
         use crate::schema::relations;
 
         let mut conn = self.conn()?;
+
+        let mut builder = SolutionBuilder::new();
 
         let (subject_objects, object_objects) =
             alias!(objects as subject_objects, objects as object_objects);
@@ -80,23 +81,26 @@ impl TripleStore {
                 object_objects.fields(objects::iri),
             ))
             .into_boxed();
-
-        if let Some(subject_iri) = query.subject {
-            println!("subject is {subject_iri}");
-            relation_query =
-                relation_query.filter(subject_objects.field(objects::iri).eq(subject_iri));
+        match query.subject {
+            crate::db::models::triple::TriplePosition::Constant(val) => {
+                relation_query = relation_query.filter(subject_objects.field(objects::iri).eq(val));
+            }
+            crate::db::models::triple::TriplePosition::Variable(var) => builder.subject(var),
         }
-
-        if let Some(predicate_iri) = query.predicate {
-            relation_query = relation_query.filter(predicates::iri.eq(predicate_iri))
+        match query.predicate {
+            crate::db::models::triple::TriplePosition::Constant(val) => {
+                relation_query = relation_query.filter(predicates::iri.eq(val))
+            }
+            crate::db::models::triple::TriplePosition::Variable(val) => builder.predicate(val),
         }
-
-        if let Some(object_iri) = query.object {
-            println!("object is {object_iri}");
-            relation_query =
-                relation_query.filter(object_objects.field(objects::iri).eq(object_iri))
+        match query.object {
+            crate::db::models::triple::TriplePosition::Constant(val) => {
+                relation_query = relation_query.filter(object_objects.field(objects::iri).eq(val))
+            }
+            crate::db::models::triple::TriplePosition::Variable(var) => {
+                builder.object(var);
+            }
         }
-
         if let Some(lim) = options.limit {
             relation_query = relation_query.limit(lim as i64);
         }
@@ -104,11 +108,9 @@ impl TripleStore {
             relation_query = relation_query.offset(options.offset as i64);
         }
 
-        let result = relation_query.load::<(String, String, String)>(&mut conn)?;
-        Ok(result
-            .into_iter()
-            .map(TripleQueryResult::relation)
-            .collect())
+        let result =
+            builder.get_rel_solutions(relation_query.load::<(String, String, String)>(&mut conn)?);
+        Ok(result)
 
         //Ok(relation_query.load::<(String, String, String)>(&mut conn)?)
     }

@@ -3,8 +3,7 @@ use log::{debug, info};
 use oxrdf::Literal;
 
 use crate::db::models::property::{LiteralMatchMode, Property, PropertyTripleQuery};
-use crate::db::models::query::QueryOptions;
-use crate::db::models::triple::TripleQueryResult;
+use crate::db::models::query::{QueryOptions, Solution, SolutionBuilder};
 use crate::store::TripleStore;
 use crate::StoreError;
 
@@ -63,35 +62,45 @@ impl TripleStore {
         &mut self,
         query: PropertyTripleQuery,
         options: QueryOptions,
-    ) -> Result<Vec<TripleQueryResult>, StoreError> {
+    ) -> Result<Vec<Solution>, StoreError> {
         use crate::schema::objects;
         use crate::schema::predicates;
         use crate::schema::properties;
 
         let mut conn = self.conn()?;
 
+        let mut builder = SolutionBuilder::new();
+
         let mut property_query = properties::table
             .inner_join(objects::table.on(properties::subject.eq(objects::id)))
             .inner_join(predicates::table.on(properties::predicate.eq(predicates::id)))
             .select((objects::iri, predicates::iri, properties::literal_value))
             .into_boxed();
-        if let Some(subject_iri) = query.subject {
-            property_query = property_query.filter(objects::iri.eq(subject_iri));
+        match query.subject {
+            crate::db::models::triple::TriplePosition::Constant(val) => {
+                property_query = property_query.filter(objects::iri.eq(val))
+            }
+            crate::db::models::triple::TriplePosition::Variable(var) => builder.subject(var),
         }
-
-        if let Some(predicate_iri) = query.predicate {
-            property_query = property_query.filter(predicates::iri.eq(predicate_iri));
+        match query.predicate {
+            crate::db::models::triple::TriplePosition::Constant(val) => {
+                property_query = property_query.filter(predicates::iri.eq(val))
+            }
+            crate::db::models::triple::TriplePosition::Variable(val) => builder.predicate(val),
         }
-
-        if let Some(value) = query.literal_value {
-            property_query = if query.literal_match_mode == LiteralMatchMode::Exact {
-                property_query.filter(properties::literal_value.eq(value))
-            } else {
-                let pattern = format!("%{value}%");
-                property_query.filter(properties::literal_value.like(pattern))
-            };
+        match query.literal_value {
+            crate::db::models::triple::TriplePosition::Constant(val) => {
+                property_query = if query.literal_match_mode == LiteralMatchMode::Exact {
+                    property_query.filter(properties::literal_value.eq(val))
+                } else {
+                    let pattern = format!("%{val}%");
+                    property_query.filter(properties::literal_value.like(pattern))
+                };
+            }
+            crate::db::models::triple::TriplePosition::Variable(var) => {
+                builder.object(var);
+            }
         }
-
         if let Some(lim) = options.limit {
             property_query = property_query.limit(lim as i64);
         }
@@ -99,10 +108,8 @@ impl TripleStore {
             property_query = property_query.offset(options.offset as i64);
         }
 
-        let result = property_query.load::<(String, String, String)>(&mut conn)?;
-        Ok(result
-            .into_iter()
-            .map(TripleQueryResult::property)
-            .collect())
+        let result =
+            builder.get_prop_solutions(property_query.load::<(String, String, String)>(&mut conn)?);
+        Ok(result)
     }
 }

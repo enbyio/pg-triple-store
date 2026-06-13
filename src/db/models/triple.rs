@@ -1,54 +1,67 @@
 use oxrdf::NamedOrBlankNode;
 
-use crate::db::models::property::PropertyTripleQuery;
-use crate::db::models::relation::RelationTripleQuery;
 use crate::StoreError;
+use crate::db::models::property::{LiteralMatchMode, PropertyTripleQuery};
+use crate::db::models::relation::RelationTripleQuery;
 
-pub enum TripleQuery {
-    Relation(RelationTripleQuery),
-    Property(PropertyTripleQuery),
+// pub enum TripleQuery {
+//     Relation(RelationTripleQuery),
+//     Property(PropertyTripleQuery),
+// }
+
+// impl TripleQuery {
+//     pub fn relation(query: RelationTripleQuery) -> Self {
+//         TripleQuery::Relation(query)
+//     }
+
+//     pub fn property(query: PropertyTripleQuery) -> Self {
+//         TripleQuery::Property(query)
+//     }
+// }
+
+#[derive(Clone)]
+pub enum TriplePosition {
+    Constant(String),
+    Variable(String),
+}
+
+#[derive(Default)]
+pub struct TripleQuery {
+    subject: Option<TriplePosition>,
+    predicate: Option<TriplePosition>,
+    object: Option<TriplePosition>,
 }
 
 impl TripleQuery {
-    pub fn relation(query: RelationTripleQuery) -> Self {
-        TripleQuery::Relation(query)
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn property(query: PropertyTripleQuery) -> Self {
-        TripleQuery::Property(query)
+    pub fn subject(&mut self, subject: TriplePosition) {
+        self.subject = Some(subject);
     }
-}
 
-#[derive(Debug, Clone)]
-pub enum TripleQueryResult {
-    Relation {
-        subject: String,
-        predicate: String,
-        object: String,
-    },
-    Property {
-        subject: String,
-        predicate: String,
-        literal_value: String,
-        literal_type: Option<String>,
-    },
-}
+    pub fn predicate(&mut self, predicate: TriplePosition) {
+        self.predicate = Some(predicate);
+    }
 
-impl TripleQueryResult {
-    pub fn relation(values: (String, String, String)) -> Self {
-        Self::Relation {
-            subject: values.0,
-            predicate: values.1,
-            object: values.2,
+    pub fn object(&mut self, object: TriplePosition) {
+        self.object = Some(object);
+    }
+
+    pub fn relation_query(&self) -> Result<RelationTripleQuery, StoreError> {
+        if let Some(s) = self.subject.clone() && let Some(p) = self.predicate.clone() && let Some(o) = self.object.clone() {
+            Ok(RelationTripleQuery::with_values(s, p, o))
+        } else {
+            Err(StoreError::DataError("subject, predicate or object missing from triple query".to_string()))
         }
     }
 
-    pub fn property(values: (String, String, String)) -> Self {
-        Self::Property {
-            subject: values.0,
-            predicate: values.1,
-            literal_value: values.2,
-            literal_type: None,
+    pub fn property_query(&self, match_type: LiteralMatchMode) -> Result<PropertyTripleQuery, StoreError> {
+        if let Some(s) = self.subject.clone() && let Some(p) = self.predicate.clone() && let Some(o) = self.object.clone() {
+            Ok(PropertyTripleQuery::with_values(s, p, o, match_type))
+        } else {
+            Err(StoreError::DataError("subject, predicate or object missing from triple query".to_string()))
         }
     }
 }

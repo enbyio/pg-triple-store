@@ -7,9 +7,8 @@ use crate::StoreError;
 use crate::db::models::object::NewObject;
 use crate::db::models::predicate::NewPredicate;
 use crate::db::models::property::Property;
-use crate::db::models::query::QueryOptions;
 use crate::db::models::relation::Relation;
-use crate::db::models::triple::{AsIri, TripleQuery, TripleQueryResult};
+use crate::db::models::triple::AsIri;
 use crate::store::TripleStore;
 
 impl TripleStore {
@@ -75,14 +74,14 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn query_triples(
-        &mut self,
-        query: TripleQuery,
-        options: QueryOptions,
-    ) -> Result<Vec<TripleQueryResult>, StoreError> {
-        match query {
-            TripleQuery::Relation(query) => self.query_relation_triples_joined(query, options),
-            TripleQuery::Property(query) => self.query_property_triples_joined(query, options)
-        }
-    }
+    // pub fn query_triples(
+    //     &mut self,
+    //     query: TripleQuery,
+    //     options: QueryOptions,
+    // ) -> Result<Vec<TripleQueryResult>, StoreError> {
+    //     match query {
+    //         TripleQuery::Relation(query) => self.query_relation_triples_joined(query, options),
+    //         TripleQuery::Property(query) => self.query_property_triples_joined(query, options)
+    //     }
+    // }
 }

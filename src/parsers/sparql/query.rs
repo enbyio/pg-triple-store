@@ -3,49 +3,45 @@ use spargebra::algebra::GraphPattern;
 use spargebra::term::TriplePattern;
 use spargebra::{Query, SparqlParser};
 
-use crate::db::models::property::{LiteralMatchMode, PropertyTripleQuery};
-use crate::db::models::query::QueryOptions;
-use crate::db::models::relation::RelationTripleQuery;
-use crate::db::models::triple::TripleQueryResult;
+use crate::db::models::property::LiteralMatchMode;
+use crate::db::models::query::{QueryOptions, QueryResult, Solution};
+use crate::db::models::triple::{TriplePosition, TripleQuery};
 use crate::store::TripleStore;
 use crate::StoreError::{self, UnsupportedInputData};
 
 impl TripleStore {
-    pub fn print_sparql_result(&mut self, sparql: &str) -> Result<(), StoreError> {
-        println!("SPARQL Result:");
-        for triple in self.parse_sparql_query(sparql)? {
-            match triple {
-                TripleQueryResult::Relation {
-                    subject,
-                    predicate,
-                    object,
-                } => println!(
-                    "{} {} {}",
-                    self.shorten_iri(subject)?,
-                    self.shorten_iri(predicate)?,
-                    self.shorten_iri(object)?
-                ),
-                TripleQueryResult::Property {
-                    subject,
-                    predicate,
-                    literal_value,
-                    ..
-                } => println!(
-                    "{} {} {}",
-                    self.shorten_iri(subject)?,
-                    self.shorten_iri(predicate)?,
-                    literal_value
-                ),
-            }
-            println!()
-        }
-        Ok(())
-    }
+    // pub fn print_sparql_result(&mut self, sparql: &str) -> Result<(), StoreError> {
+    //     println!("SPARQL Result:");
+    //     for triple in self.parse_sparql_query(sparql)? {
+    //         match triple {
+    //             TripleQueryResult::Relation {
+    //                 subject,
+    //                 predicate,
+    //                 object,
+    //             } => println!(
+    //                 "{} {} {}",
+    //                 self.shorten_iri(subject)?,
+    //                 self.shorten_iri(predicate)?,
+    //                 self.shorten_iri(object)?
+    //             ),
+    //             TripleQueryResult::Property {
+    //                 subject,
+    //                 predicate,
+    //                 literal_value,
+    //                 ..
+    //             } => println!(
+    //                 "{} {} {}",
+    //                 self.shorten_iri(subject)?,
+    //                 self.shorten_iri(predicate)?,
+    //                 literal_value
+    //             ),
+    //         }
+    //         println!()
+    //     }
+    //     Ok(())
+    // }
 
-    pub fn parse_sparql_query(
-        &mut self,
-        sparql: &str,
-    ) -> Result<Vec<TripleQueryResult>, StoreError> {
+    pub fn parse_sparql_query(&mut self, sparql: &str) -> Result<QueryResult, StoreError> {
         let parser = SparqlParser::new();
         let query = parser.parse_query(&self.inject_prefixes(sparql)?.to_string())?;
         match query {
@@ -75,7 +71,7 @@ impl TripleStore {
         &mut self,
         pattern: GraphPattern,
         options: QueryOptions,
-    ) -> Result<Vec<TripleQueryResult>, StoreError> {
+    ) -> Result<QueryResult, StoreError> {
         match pattern {
             GraphPattern::Bgp { patterns } => {
                 let mut all_results = Vec::new();
@@ -83,7 +79,8 @@ impl TripleStore {
                     let results = self.execute_triple_pattern(tp, options)?;
                     all_results.extend(results);
                 }
-                Ok(all_results)
+                todo!()
+                //Ok(all_results)
             }
             GraphPattern::Project { inner, .. } => self.execute_pattern(*inner, options),
             GraphPattern::Distinct { inner } => self.execute_pattern(*inner, options),
@@ -113,60 +110,64 @@ impl TripleStore {
         &mut self,
         tp: TriplePattern,
         options: QueryOptions,
-    ) -> Result<Vec<TripleQueryResult>, StoreError> {
-        // Map SPARQL Subject (Variable or NamedNode) to Option<String>
-        let s = match tp.subject {
+    ) -> Result<Vec<Solution>, StoreError> {
+        let mut query = TripleQuery::new();
+        match tp.subject {
+            spargebra::term::TermPattern::NamedNode(named_node) => query.subject(
+                TriplePosition::Constant(self.normalize_iri(named_node.as_str())?),
+            ),
+            spargebra::term::TermPattern::Variable(variable) => {
+                query.subject(TriplePosition::Variable(variable.as_str().to_string()))
+            }
+            _ => {
+                return Err(StoreError::DataError(
+                    "Blank Node, Literal or Triple not supported as subject".to_string(),
+                ))
+            }
+        };
+        match tp.predicate {
+            spargebra::term::NamedNodePattern::NamedNode(named_node) => query.predicate(
+                TriplePosition::Constant(self.normalize_iri(named_node.as_str())?),
+            ),
+            spargebra::term::NamedNodePattern::Variable(variable) => {
+                query.predicate(TriplePosition::Variable(variable.as_str().to_string()))
+            }
+        };
+        let mut results: Vec<Solution> = Vec::new();
+        match tp.object {
             spargebra::term::TermPattern::NamedNode(named_node) => {
-                Some(self.normalize_iri(named_node.as_str())?)
+                query.object(TriplePosition::Constant(
+                    self.normalize_iri(named_node.as_str())?,
+                ));
+                results
+                    .extend(self.query_relation_triples_joined(query.relation_query()?, options)?);
             }
-            _ => None,
-        };
-
-        // Map SPARQL Predicate to Option<String>
-        let p = match tp.predicate {
-            spargebra::term::NamedNodePattern::NamedNode(named_node) => {
-                Some(self.normalize_iri(named_node.as_str())?)
-            }
-            _ => None,
-        };
-
-        // Map SPARQL Object
-        let res = match tp.object {
-            spargebra::term::TermPattern::NamedNode(nn) => self.query_relation_triples_joined(
-                RelationTripleQuery::with_values(s, p, Some(self.normalize_iri(nn.as_str())?)),
-                options,
-            ),
-            spargebra::term::TermPattern::Literal(literal) => self.query_property_triples_joined(
-                PropertyTripleQuery::with_values(
-                    s,
-                    p,
-                    Some(literal.to_string()),
-                    LiteralMatchMode::Exact,
-                ),
-                options,
-            ),
-            spargebra::term::TermPattern::Variable(_) => {
-                let mut results = self.query_property_triples_joined(
-                    PropertyTripleQuery::with_values(
-                        s.clone(),
-                        p.clone(),
-                        None,
-                        LiteralMatchMode::Exact,
-                    ),
-                    options,
-                )?;
-                results.extend(self.query_relation_triples_joined(
-                    RelationTripleQuery::with_values(s, p, None),
+            spargebra::term::TermPattern::Literal(literal) => {
+                query.object(TriplePosition::Constant(literal.to_string()));
+                results.extend(self.query_property_triples_joined(
+                    query.property_query(LiteralMatchMode::Exact)?,
                     options,
                 )?);
-                Ok(results)
             }
-            _ => Err(UnsupportedInputData),
-        }?;
+            spargebra::term::TermPattern::Variable(variable) => {
+                query.object(TriplePosition::Variable(variable.as_str().to_string()));
+                results
+                    .extend(self.query_relation_triples_joined(query.relation_query()?, options)?);
+                results.extend(self.query_property_triples_joined(
+                    query.property_query(LiteralMatchMode::Exact)?,
+                    options,
+                )?);
+            }
+            _ => {
+                return Err(StoreError::DataError(
+                    "Blank Node or Triple are not supported as objects".to_string(),
+                ))
+            }
+        }
         if let Some(lim) = options.limit {
-            Ok(res[0..lim].to_vec())
+            Ok(results[0..lim].to_vec())
         } else {
-            Ok(res)
+            Ok(results)
         }
     }
 }
