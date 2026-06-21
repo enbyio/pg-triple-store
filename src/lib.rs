@@ -2,6 +2,7 @@ pub mod db;
 pub mod parsers;
 pub mod schema;
 pub mod store;
+pub mod util;
 
 #[derive(Debug)]
 pub enum StoreError {

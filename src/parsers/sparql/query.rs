@@ -1,13 +1,16 @@
+use std::collections::{BTreeMap, HashSet};
+
 use diesel::{QueryDsl, RunQueryDsl};
 use spargebra::algebra::GraphPattern;
 use spargebra::term::TriplePattern;
 use spargebra::{Query, SparqlParser};
 
+use crate::StoreError::{self, UnsupportedInputData};
 use crate::db::models::property::LiteralMatchMode;
-use crate::db::models::query::{QueryOptions, QueryResult, Solution};
+use crate::db::models::query::{QueryOptions, QueryResult, Solution, SolutionSet, Term};
 use crate::db::models::triple::{TriplePosition, TripleQuery};
 use crate::store::TripleStore;
-use crate::StoreError::{self, UnsupportedInputData};
+use crate::util::triple_pattern_vars;
 
 impl TripleStore {
     // pub fn print_sparql_result(&mut self, sparql: &str) -> Result<(), StoreError> {
@@ -106,6 +109,52 @@ impl TripleStore {
         }
     }
 
+    fn execute_bgp(
+        &mut self,
+        patterns: Vec<TriplePattern>,
+        opts: QueryOptions,
+    ) -> Result<SolutionSet, StoreError> {
+        if patterns.is_empty() {
+            return Ok(SolutionSet {
+                vars: vec![],
+                rows: vec![],
+            });
+        }
+        let mut acc: Vec<Solution> = vec![];
+        let mut acc_vars: HashSet<String> = HashSet::new();
+        let mut seeded = false;
+
+        for pattern in patterns {
+            let pattern_vars = triple_pattern_vars(&pattern);
+
+            if !seeded {
+                let rows = self.execute_triple_pattern_with_bindings(pattern, &BTreeMap::new())?;
+                acc = rows;
+                acc_vars = pattern_vars;
+                seeded = true;
+                continue;
+            }
+
+            if acc.is_empty() {
+                break;
+            }
+
+            let shared: HashSet<&String> = pattern_vars.intersection(&acc_vars).collect();
+            if pattern_vars.is_empty() {
+                
+            }
+        }
+        todo!()
+    }
+
+    fn execute_triple_pattern_with_bindings(
+        &mut self,
+        tp: TriplePattern,
+        known: &BTreeMap<String, Vec<Term>>, // var name → allowed values (IN list)
+    ) -> Result<Vec<Solution>, StoreError> {
+        todo!()
+    }
+
     fn execute_triple_pattern(
         &mut self,
         tp: TriplePattern,
@@ -122,7 +171,7 @@ impl TripleStore {
             _ => {
                 return Err(StoreError::DataError(
                     "Blank Node, Literal or Triple not supported as subject".to_string(),
-                ))
+                ));
             }
         };
         match tp.predicate {
@@ -161,7 +210,7 @@ impl TripleStore {
             _ => {
                 return Err(StoreError::DataError(
                     "Blank Node or Triple are not supported as objects".to_string(),
-                ))
+                ));
             }
         }
         if let Some(lim) = options.limit {
