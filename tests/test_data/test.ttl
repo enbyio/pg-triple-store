@@ -1,0 +1,27 @@
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# People
+ex:alice ex:knows ex:bob ;
+         ex:knows ex:carol ;
+         ex:name  "Alice" ;
+         ex:age   "30" .
+
+ex:bob   ex:knows ex:carol ;
+         ex:knows ex:dave ;
+         ex:name  "Bob" ;
+         ex:age   "25" .
+
+ex:carol ex:knows ex:dave ;
+         ex:name  "Carol" ;
+         ex:age   "25" .
+
+ex:dave  ex:name  "Dave" .
+
+# Organisational chain
+ex:alice ex:worksAt ex:orgA .
+ex:bob   ex:worksAt ex:orgA .
+ex:carol ex:worksAt ex:orgB .
+
+ex:orgA  ex:partOf ex:consortium .
+ex:orgB  ex:partOf ex:consortium .
