@@ -27,7 +27,7 @@ fn test_triple_parsing() {
 
     // Case 1:
     println!(
-        "{:?}",
+        "{}",
         store
             .parse_sparql_query(
                 "SELECT ?friend ?name WHERE {

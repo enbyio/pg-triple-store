@@ -4,6 +4,7 @@ pub struct QueryOptions {
     pub offset: usize,
 }
 use std::collections::BTreeMap;
+use std::fmt::Display;
 
 use oxrdf::Triple;
 
@@ -19,12 +20,39 @@ impl Solution {
     }
 }
 
+impl Display for Solution {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: String = self
+            .bindings
+            .iter()
+            .map(|(k, v)| format!("{}: {}", k, v))
+            .collect::<Vec<String>>()
+            .join(", ");
+        write!(f, "{s}")
+    }
+}
+
 /// Your own term type — decouples you from spargebra/oxrdf at the result boundary.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Term {
     Iri(String),
     Literal { value: String, datatype: String },
     // BlankNode(String), later
+}
+
+impl Display for Term {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Term::Iri(iri) => write!(f, "{iri}"),
+            Term::Literal { value, datatype } => {
+                if datatype != "Unknown" {
+                    write!(f, "{value}")
+                } else {
+                    write!(f, "{value}@{datatype}")
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -38,6 +66,26 @@ pub enum QueryResult {
     Solutions(SolutionSet),
     Boolean(bool),
     Graph(Vec<Triple>),
+}
+
+impl Display for QueryResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            QueryResult::Solutions(solution_set) => {
+                let sol = solution_set
+                    .rows
+                    .iter()
+                    .map(|a| format!("({a})"))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                write!(f, "{:?}: [{}]", solution_set.vars, sol)
+            }
+            QueryResult::Boolean(val) => write!(f, "{val}"),
+            QueryResult::Graph(graph) => {
+                write!(f, "Graph output is not supported yet: {:?}", graph)
+            }
+        }
+    }
 }
 
 #[derive(Default)]
