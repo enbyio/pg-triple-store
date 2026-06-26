@@ -45,7 +45,7 @@ impl Display for Term {
         match self {
             Term::Iri(iri) => write!(f, "{iri}"),
             Term::Literal { value, datatype } => {
-                if datatype != "Unknown" {
+                if datatype.eq("Unknown") {
                     write!(f, "{value}")
                 } else {
                     write!(f, "{value}@{datatype}")
