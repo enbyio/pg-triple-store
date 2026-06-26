@@ -25,6 +25,11 @@ impl TripleStore {
         self.batch_upsert_triples(&triples)
     }
 
+    pub fn import_turtle_file(&mut self, path: &str) -> Result<(), StoreError> {
+        let data = std::fs::read_to_string(path)?;
+        self.import_turtle_data(data)
+    }
+
     pub fn import_turtle_from_url(&mut self, url: &str) -> Result<(), StoreError> {
         let client = reqwest::blocking::Client::new();
         let content = client
