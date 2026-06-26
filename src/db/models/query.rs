@@ -27,11 +27,13 @@ pub enum Term {
     // BlankNode(String), later
 }
 
+#[derive(Debug)]
 pub struct SolutionSet {
     pub vars: Vec<String>,
     pub rows: Vec<Solution>,
 }
 
+#[derive(Debug)]
 pub enum QueryResult {
     Solutions(SolutionSet),
     Boolean(bool),

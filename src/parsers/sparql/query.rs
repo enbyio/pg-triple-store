@@ -75,6 +75,7 @@ impl TripleStore {
         pattern: GraphPattern,
         options: QueryOptions,
     ) -> Result<QueryResult, StoreError> {
+        log::debug!("GraphPattern: {}", pattern);
         match pattern {
             GraphPattern::Bgp { patterns } => {
                 Ok(QueryResult::Solutions(self.execute_bgp(patterns, options)?))
@@ -119,6 +120,7 @@ impl TripleStore {
         let mut seeded = false;
 
         for pattern in patterns {
+            log::debug!("acc: {:?}", acc);
             let pattern_vars = triple_pattern_vars(&pattern);
 
             if !seeded {
@@ -218,6 +220,8 @@ impl TripleStore {
         tp: TriplePattern,
         known: &BTreeMap<String, Vec<Term>>, // var name → allowed values (IN list)
     ) -> Result<Vec<Solution>, StoreError> {
+        log::debug!("known variables: {:?}", known);
+        log::debug!("Pattern: {:?}", tp);
         let mut query = TripleQuery::new();
         match tp.subject {
             spargebra::term::TermPattern::NamedNode(named_node) => query.subject(
@@ -262,7 +266,7 @@ impl TripleStore {
                 )?);
             }
             spargebra::term::TermPattern::Literal(literal) => {
-                query.object(TriplePosition::Constant(literal.to_string()));
+                query.object(TriplePosition::Constant(literal.value().to_string()));
                 results.extend(self.query_property_triples_joined(
                     query.property_query(LiteralMatchMode::Exact)?,
                     QueryOptions::default(),
@@ -290,6 +294,7 @@ impl TripleStore {
                 ));
             }
         };
+        log::debug!("result: {:?}", results);
         Ok(results)
     }
 
@@ -330,7 +335,7 @@ impl TripleStore {
                     .extend(self.query_relation_triples_joined(query.relation_query()?, options)?);
             }
             spargebra::term::TermPattern::Literal(literal) => {
-                query.object(TriplePosition::Constant(literal.to_string()));
+                query.object(TriplePosition::Constant(literal.value().to_string()));
                 results.extend(self.query_property_triples_joined(
                     query.property_query(LiteralMatchMode::Exact)?,
                     options,

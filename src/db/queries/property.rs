@@ -81,7 +81,7 @@ impl TripleStore {
                 property_query = property_query.filter(objects::iri.eq(val))
             }
             crate::db::models::triple::TriplePosition::Variable(var) => builder.subject(var),
-            crate::db::models::triple::TriplePosition::Bound(_, terms) => {
+            crate::db::models::triple::TriplePosition::Bound(var, terms) => {
                 let iris: Vec<String> = terms
                     .iter()
                     .filter_map(|t| match t {
@@ -89,6 +89,7 @@ impl TripleStore {
                         _ => None,
                     })
                     .collect();
+                builder.subject(var);
                 property_query = property_query.filter(objects::iri.eq_any(iris));
             }
         }
@@ -97,7 +98,7 @@ impl TripleStore {
                 property_query = property_query.filter(predicates::iri.eq(val))
             }
             crate::db::models::triple::TriplePosition::Variable(val) => builder.predicate(val),
-            crate::db::models::triple::TriplePosition::Bound(_, terms) => {
+            crate::db::models::triple::TriplePosition::Bound(var, terms) => {
                 let iris: Vec<String> = terms
                     .iter()
                     .filter_map(|t| match t {
@@ -105,6 +106,7 @@ impl TripleStore {
                         _ => None,
                     })
                     .collect();
+                builder.predicate(var);
                 property_query = property_query.filter(predicates::iri.eq_any(iris))
             }
         }
@@ -120,7 +122,7 @@ impl TripleStore {
             crate::db::models::triple::TriplePosition::Variable(var) => {
                 builder.object(var);
             }
-            crate::db::models::triple::TriplePosition::Bound(_, terms) => {
+            crate::db::models::triple::TriplePosition::Bound(var, terms) => {
                 let iris: Vec<String> = terms
                     .iter()
                     .filter_map(|t| match t {
@@ -128,6 +130,7 @@ impl TripleStore {
                         _ => None,
                     })
                     .collect();
+                builder.subject(var);
                 property_query = property_query.filter(objects::iri.eq_any(iris))
             }
         }

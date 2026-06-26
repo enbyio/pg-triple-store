@@ -1,3 +1,5 @@
+use std::io;
+
 pub mod db;
 pub mod parsers;
 pub mod schema;
@@ -12,6 +14,7 @@ pub enum StoreError {
     ConnectionError(String),
     MigrationError(String),
     SparqlSyntaxError(String),
+    IOError(String),
     UnsupportedInputData,
 }
 
@@ -42,5 +45,11 @@ impl From<spargebra::SparqlSyntaxError> for StoreError {
 impl From<reqwest::Error> for StoreError {
     fn from(value: reqwest::Error) -> Self {
         StoreError::ConnectionError(format!("Reqwest Error: {}", value))
+    }
+}
+
+impl From<io::Error> for StoreError {
+    fn from(value: io::Error) -> Self {
+        StoreError::IOError(format!("IO Error: {}", value))
     }
 }
