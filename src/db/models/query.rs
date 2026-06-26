@@ -10,7 +10,7 @@ use oxrdf::Triple;
 /// One row of a SPARQL solution.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Solution {
-    bindings: BTreeMap<String, Term>, // var name -> term (BTreeMap = stable ordering)
+    pub(crate) bindings: BTreeMap<String, Term>, // var name -> term (BTreeMap = stable ordering)
 }
 
 impl Solution {
@@ -20,7 +20,7 @@ impl Solution {
 }
 
 /// Your own term type — decouples you from spargebra/oxrdf at the result boundary.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Term {
     Iri(String),
     Literal { value: String, datatype: String },

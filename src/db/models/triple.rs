@@ -2,6 +2,7 @@ use oxrdf::NamedOrBlankNode;
 
 use crate::StoreError;
 use crate::db::models::property::{LiteralMatchMode, PropertyTripleQuery};
+use crate::db::models::query::Term;
 use crate::db::models::relation::RelationTripleQuery;
 
 // pub enum TripleQuery {
@@ -23,6 +24,7 @@ use crate::db::models::relation::RelationTripleQuery;
 pub enum TriplePosition {
     Constant(String),
     Variable(String),
+    Bound(String, Vec<Term>)
 }
 
 #[derive(Default)]

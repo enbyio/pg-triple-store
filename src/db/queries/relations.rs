@@ -1,4 +1,4 @@
-use crate::db::models::query::{QueryOptions, Solution, SolutionBuilder};
+use crate::db::models::query::{QueryOptions, Solution, SolutionBuilder, Term};
 use crate::db::models::relation::{Relation, RelationTripleQuery};
 use crate::store::TripleStore;
 use crate::StoreError;
@@ -86,12 +86,33 @@ impl TripleStore {
                 relation_query = relation_query.filter(subject_objects.field(objects::iri).eq(val));
             }
             crate::db::models::triple::TriplePosition::Variable(var) => builder.subject(var),
+            crate::db::models::triple::TriplePosition::Bound(_, terms) => {
+                let iris: Vec<String> = terms
+                    .iter()
+                    .filter_map(|t| match t {
+                        Term::Iri(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                relation_query =
+                    relation_query.filter(subject_objects.field(objects::iri).eq_any(iris))
+            }
         }
         match query.predicate {
             crate::db::models::triple::TriplePosition::Constant(val) => {
                 relation_query = relation_query.filter(predicates::iri.eq(val))
             }
             crate::db::models::triple::TriplePosition::Variable(val) => builder.predicate(val),
+            crate::db::models::triple::TriplePosition::Bound(_, terms) => {
+                let iris: Vec<String> = terms
+                    .iter()
+                    .filter_map(|t| match t {
+                        Term::Iri(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                relation_query = relation_query.filter(predicates::iri.eq_any(iris))
+            }
         }
         match query.object {
             crate::db::models::triple::TriplePosition::Constant(val) => {
@@ -99,6 +120,17 @@ impl TripleStore {
             }
             crate::db::models::triple::TriplePosition::Variable(var) => {
                 builder.object(var);
+            }
+            crate::db::models::triple::TriplePosition::Bound(_, terms) => {
+                let iris: Vec<String> = terms
+                    .iter()
+                    .filter_map(|t| match t {
+                        Term::Iri(s) => Some(s.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                relation_query =
+                    relation_query.filter(object_objects.field(objects::iri).eq_any(iris))
             }
         }
         if let Some(lim) = options.limit {
