@@ -55,7 +55,7 @@ impl Display for Term {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SolutionSet {
     pub vars: Vec<String>,
     pub rows: Vec<Solution>,
@@ -75,10 +75,17 @@ impl Display for QueryResult {
                 let sol = solution_set
                     .rows
                     .iter()
-                    .map(|a| format!("({a})"))
+                    .map(|row| {
+                        solution_set
+                            .vars
+                            .iter()
+                            .map(|var| format!("{}: {}", var, row.bindings.get(var).unwrap()))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    })
                     .collect::<Vec<String>>()
-                    .join(", ");
-                write!(f, "{:?}: [{}]", solution_set.vars, sol)
+                    .join("), (");
+                write!(f, "{:?}: [({})]", solution_set.vars, sol)
             }
             QueryResult::Boolean(val) => write!(f, "{val}"),
             QueryResult::Graph(graph) => {

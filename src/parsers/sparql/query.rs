@@ -38,7 +38,7 @@ impl TripleStore {
         Ok(format!("{}{}", prefix_block, query))
     }
 
-    fn execute_pattern(
+    pub(crate) fn execute_pattern(
         &mut self,
         pattern: GraphPattern,
         options: QueryOptions,
@@ -48,7 +48,7 @@ impl TripleStore {
             GraphPattern::Bgp { patterns } => {
                 Ok(QueryResult::Solutions(self.execute_bgp(patterns, options)?))
             }
-            GraphPattern::Project { inner, .. } => self.execute_pattern(*inner, options),
+            GraphPattern::Project { inner, variables } => self.project_pattern(*inner, variables),
             GraphPattern::Distinct { inner } => self.execute_pattern(*inner, options),
             GraphPattern::Slice {
                 inner,
