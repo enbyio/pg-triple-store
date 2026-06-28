@@ -109,5 +109,18 @@ fn test_triple_parsing() {
     }"
             )
             .unwrap()
+    );
+
+    println!(
+        "{}",
+        store
+            .parse_sparql_query(
+                "SELECT DISTINCT ?d ?c WHERE {
+        ?a ex:knows ?b .
+        ?a ex:name ?d .
+        ?b ex:name ?c .
+        }"
+            )
+            .unwrap()
     )
 }
