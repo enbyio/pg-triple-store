@@ -1,6 +1,6 @@
+use diesel::Selectable;
 use diesel::deserialize::Queryable;
 use diesel::prelude::Insertable;
-use diesel::Selectable;
 
 use crate::db::models::triple::TriplePosition;
 use crate::schema::relations;

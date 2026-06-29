@@ -5,11 +5,11 @@ use spargebra::algebra::GraphPattern;
 use spargebra::term::TriplePattern;
 use spargebra::{Query, SparqlParser};
 
+use crate::StoreError::{self, UnsupportedInputData};
 use crate::db::models::property::LiteralMatchMode;
 use crate::db::models::query::{QueryOptions, QueryResult, Solution, Term};
 use crate::db::models::triple::{TriplePosition, TripleQuery};
 use crate::store::TripleStore;
-use crate::StoreError::{self, UnsupportedInputData};
 
 impl TripleStore {
     pub fn parse_sparql_query(&mut self, sparql: &str) -> Result<QueryResult, StoreError> {

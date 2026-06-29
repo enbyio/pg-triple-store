@@ -2,10 +2,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use spargebra::term::TriplePattern;
 
+use crate::StoreError;
 use crate::db::models::query::{QueryOptions, Solution, SolutionSet, Term};
 use crate::store::TripleStore;
 use crate::util::{merge, triple_pattern_vars};
-use crate::StoreError;
 
 impl TripleStore {
     pub(crate) fn execute_bgp(

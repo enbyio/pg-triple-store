@@ -3,9 +3,9 @@ use std::collections::{HashMap, HashSet};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
 
+use crate::StoreError;
 use crate::db::models::object::{NewObject, Object};
 use crate::store::TripleStore;
-use crate::StoreError;
 
 use crate::schema::objects::dsl::*;
 

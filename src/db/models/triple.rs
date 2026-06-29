@@ -24,7 +24,7 @@ use crate::db::models::relation::RelationTripleQuery;
 pub enum TriplePosition {
     Constant(String),
     Variable(String),
-    Bound(String, Vec<Term>)
+    Bound(String, Vec<Term>),
 }
 
 #[derive(Default)]
@@ -52,18 +52,31 @@ impl TripleQuery {
     }
 
     pub fn relation_query(&self) -> Result<RelationTripleQuery, StoreError> {
-        if let Some(s) = self.subject.clone() && let Some(p) = self.predicate.clone() && let Some(o) = self.object.clone() {
+        if let Some(s) = self.subject.clone()
+            && let Some(p) = self.predicate.clone()
+            && let Some(o) = self.object.clone()
+        {
             Ok(RelationTripleQuery::with_values(s, p, o))
         } else {
-            Err(StoreError::DataError("subject, predicate or object missing from triple query".to_string()))
+            Err(StoreError::DataError(
+                "subject, predicate or object missing from triple query".to_string(),
+            ))
         }
     }
 
-    pub fn property_query(&self, match_type: LiteralMatchMode) -> Result<PropertyTripleQuery, StoreError> {
-        if let Some(s) = self.subject.clone() && let Some(p) = self.predicate.clone() && let Some(o) = self.object.clone() {
+    pub fn property_query(
+        &self,
+        match_type: LiteralMatchMode,
+    ) -> Result<PropertyTripleQuery, StoreError> {
+        if let Some(s) = self.subject.clone()
+            && let Some(p) = self.predicate.clone()
+            && let Some(o) = self.object.clone()
+        {
             Ok(PropertyTripleQuery::with_values(s, p, o, match_type))
         } else {
-            Err(StoreError::DataError("subject, predicate or object missing from triple query".to_string()))
+            Err(StoreError::DataError(
+                "subject, predicate or object missing from triple query".to_string(),
+            ))
         }
     }
 }

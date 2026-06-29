@@ -1,9 +1,9 @@
 use diesel::upsert::excluded;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
+use crate::StoreError;
 use crate::db::models::prefix::Prefix;
 use crate::store::TripleStore;
-use crate::StoreError;
 
 use crate::schema::prefixes::dsl::*;
 
@@ -34,7 +34,8 @@ impl TripleStore {
 
     pub fn get_all_prefixes(&mut self) -> Result<Vec<(String, String)>, StoreError> {
         let mut conn = self.conn()?;
-        Ok(prefixes.select((namespace, prefix))
+        Ok(prefixes
+            .select((namespace, prefix))
             .load::<(String, String)>(&mut conn)?)
     }
 
@@ -42,11 +43,10 @@ impl TripleStore {
         let mut best: Option<(String, String)> = None;
         let mut longest_fit: usize = 0;
         for (ns, pfx) in self.get_all_prefixes()? {
-            if iri.starts_with(ns.as_str())
-                && ns.len() > longest_fit {
-                    best = Some((ns.clone(), pfx.clone()));
-                        longest_fit = ns.len();
-                }
+            if iri.starts_with(ns.as_str()) && ns.len() > longest_fit {
+                best = Some((ns.clone(), pfx.clone()));
+                longest_fit = ns.len();
+            }
         }
         Ok(match best {
             Some((ns, pfx)) => {
@@ -74,9 +74,10 @@ impl TripleStore {
             return Ok(trimmed.to_string());
         }
         if let Some((prefix_part, _)) = trimmed.split_once(':')
-            && !prefix_part.contains('/') {
-                return self.get_absolute_form(trimmed.to_string());
-            }
+            && !prefix_part.contains('/')
+        {
+            return self.get_absolute_form(trimmed.to_string());
+        }
         Err(StoreError::DataError(format!(
             "Cannot normalize IRI: '{}'",
             raw_iri

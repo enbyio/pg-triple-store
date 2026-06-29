@@ -3,9 +3,9 @@ use std::collections::{HashMap, HashSet};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use log::error;
 
+use crate::StoreError;
 use crate::db::models::predicate::{NewPredicate, Predicate};
 use crate::store::TripleStore;
-use crate::StoreError;
 
 use crate::schema::predicates::dsl::*;
 

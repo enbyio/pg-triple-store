@@ -1,8 +1,8 @@
+use crate::StoreError;
 use crate::db::models::query::{QueryOptions, Solution, SolutionBuilder, Term};
 use crate::db::models::relation::{Relation, RelationTripleQuery};
 use crate::store::TripleStore;
-use crate::StoreError;
-use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, alias};
 use log::{debug, info};
 
 impl TripleStore {

@@ -1,9 +1,9 @@
 use oxrdf::Variable;
 use spargebra::algebra::GraphPattern;
 
+use crate::StoreError;
 use crate::db::models::query::{QueryOptions, QueryResult, SolutionSet};
 use crate::store::TripleStore;
-use crate::StoreError;
 
 impl TripleStore {
     pub(crate) fn project_pattern(

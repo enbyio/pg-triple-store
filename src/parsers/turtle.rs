@@ -2,9 +2,9 @@ use log::{error, info};
 use oxrdf::Triple;
 use oxttl::TurtleParser;
 
+use crate::StoreError;
 use crate::db::models::prefix::Prefix;
 use crate::store::TripleStore;
-use crate::StoreError;
 
 impl TripleStore {
     pub fn import_turtle_data(&mut self, data: String) -> Result<(), StoreError> {

@@ -62,7 +62,12 @@ impl TripleStore {
                             error!("could not find id for the iri {}", named_node)
                         }
                     }
-                    Term::Literal(literal) => properties.push(Property::new(subject, predicate, literal.to_string(), None)),
+                    Term::Literal(literal) => properties.push(Property::new(
+                        subject,
+                        predicate,
+                        literal.to_string(),
+                        None,
+                    )),
                     _ => error!("Blank Node and Triples in Triples are not supported yet"),
                 }
             } else {
