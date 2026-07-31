@@ -124,3 +124,39 @@ fn test_triple_parsing() {
             .unwrap()
     )
 }
+
+#[test]
+fn test_filters() {
+    env_logger::Builder::from_default_env()
+        .filter(None, log::LevelFilter::Debug)
+        .init();
+    let mut store = TripleStore::new_from_env().unwrap();
+    assert!(store.reset_db().is_ok());
+    assert!(store.import_turtle_file("tests/test_data/test.ttl").is_ok());
+    println!(
+        "{}",
+        store
+            .parse_sparql_query(
+                "SELECT ?p
+    WHERE {
+        ?p ex:name ?name .
+        FILTER(?name = \"Alice\" || ?name = \"Dave\")
+    }"
+            )
+            .unwrap()
+    );
+
+    println!(
+        "{}",
+        store
+            .parse_sparql_query(
+                "SELECT ?person ?friend
+                WHERE {
+                    ?person ex:knows ?friend .
+                    ?friend ex:age ?age .
+                    FILTER(?age = \"25\")
+                }"
+            )
+            .unwrap()
+    )
+}

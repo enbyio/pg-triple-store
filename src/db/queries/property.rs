@@ -2,10 +2,10 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpression
 use log::{debug, info};
 use oxrdf::Literal;
 
-use crate::StoreError;
 use crate::db::models::property::{LiteralMatchMode, Property, PropertyTripleQuery};
 use crate::db::models::query::{QueryOptions, Solution, SolutionBuilder, Term};
 use crate::store::TripleStore;
+use crate::StoreError;
 
 impl TripleStore {
     pub fn create_property_triple(
@@ -58,7 +58,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn query_property_triples_joined(
+    pub(crate) fn query_property_triples_joined(
         &mut self,
         query: PropertyTripleQuery,
         options: QueryOptions,
@@ -132,6 +132,11 @@ impl TripleStore {
                     .collect();
                 builder.subject(var);
                 property_query = property_query.filter(objects::iri.eq_any(iris))
+            }
+        }
+        if let Some(filters) = options.filter {
+            for filter in filters {
+                todo!();
             }
         }
         if let Some(lim) = options.limit {

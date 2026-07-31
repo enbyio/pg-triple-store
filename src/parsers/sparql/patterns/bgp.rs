@@ -2,10 +2,10 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use spargebra::term::TriplePattern;
 
-use crate::StoreError;
 use crate::db::models::query::{QueryOptions, Solution, SolutionSet, Term};
 use crate::store::TripleStore;
 use crate::util::{merge, triple_pattern_vars};
+use crate::StoreError;
 
 impl TripleStore {
     pub(crate) fn execute_bgp(
@@ -28,7 +28,7 @@ impl TripleStore {
             let pattern_vars = triple_pattern_vars(&pattern);
 
             if !seeded {
-                let rows = self.execute_triple_pattern(pattern, opts)?;
+                let rows = self.execute_triple_pattern(pattern, opts.clone())?;
                 acc = rows;
                 acc_vars = pattern_vars;
                 seeded = true;
@@ -42,11 +42,14 @@ impl TripleStore {
             let shared: HashSet<&String> = pattern_vars.intersection(&acc_vars).collect();
             if pattern_vars.is_empty() {
                 // no variables in pattern, constant existence check
-                if !self.execute_triple_pattern(pattern, opts)?.is_empty() {
+                if !self
+                    .execute_triple_pattern(pattern, opts.clone())?
+                    .is_empty()
+                {
                     acc = vec![]
                 }
             } else if shared.is_empty() {
-                let new_rows = self.execute_triple_pattern(pattern, opts)?;
+                let new_rows = self.execute_triple_pattern(pattern, opts.clone())?;
                 acc = acc
                     .iter()
                     .flat_map(|l| new_rows.iter().map(move |r| merge(l, r)))

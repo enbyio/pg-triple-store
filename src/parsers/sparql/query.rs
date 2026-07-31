@@ -5,11 +5,11 @@ use spargebra::algebra::GraphPattern;
 use spargebra::term::TriplePattern;
 use spargebra::{Query, SparqlParser};
 
-use crate::StoreError::{self, UnsupportedInputData};
 use crate::db::models::property::LiteralMatchMode;
 use crate::db::models::query::{QueryOptions, QueryResult, Solution, Term};
 use crate::db::models::triple::{TriplePosition, TripleQuery};
 use crate::store::TripleStore;
+use crate::StoreError::{self, UnsupportedInputData};
 
 impl TripleStore {
     pub fn parse_sparql_query(&mut self, sparql: &str) -> Result<QueryResult, StoreError> {
@@ -57,6 +57,7 @@ impl TripleStore {
             } => {
                 let new_mods = QueryOptions {
                     offset: options.offset.saturating_add(start),
+                    filter: None,
                     limit: match (options.limit, length) {
                         (None, Some(l)) => Some(l),
                         (Some(existing), Some(l)) => Some(existing.min(l)),
@@ -67,7 +68,7 @@ impl TripleStore {
                 self.execute_pattern(*inner, new_mods)
             }
             GraphPattern::OrderBy { inner, .. } => self.execute_pattern(*inner, options),
-            GraphPattern::Filter { inner, .. } => self.execute_pattern(*inner, options),
+            GraphPattern::Filter { inner, expr } => self.add_filter(*inner, expr),
             _ => Err(UnsupportedInputData),
         }
     }
@@ -188,23 +189,25 @@ impl TripleStore {
                 query.object(TriplePosition::Constant(
                     self.normalize_iri(named_node.as_str())?,
                 ));
-                results
-                    .extend(self.query_relation_triples_joined(query.relation_query()?, options)?);
+                results.extend(
+                    self.query_relation_triples_joined(query.relation_query()?, options.clone())?,
+                );
             }
             spargebra::term::TermPattern::Literal(literal) => {
                 query.object(TriplePosition::Constant(literal.value().to_string()));
                 results.extend(self.query_property_triples_joined(
                     query.property_query(LiteralMatchMode::Exact)?,
-                    options,
+                    options.clone(),
                 )?);
             }
             spargebra::term::TermPattern::Variable(variable) => {
                 query.object(TriplePosition::Variable(variable.as_str().to_string()));
-                results
-                    .extend(self.query_relation_triples_joined(query.relation_query()?, options)?);
+                results.extend(
+                    self.query_relation_triples_joined(query.relation_query()?, options.clone())?,
+                );
                 results.extend(self.query_property_triples_joined(
                     query.property_query(LiteralMatchMode::Exact)?,
-                    options,
+                    options.clone(),
                 )?);
             }
             _ => {

@@ -1,3 +1,4 @@
+pub mod filter;
 pub mod object;
 pub mod predicate;
 pub mod prefix;

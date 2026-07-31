@@ -1,12 +1,15 @@
-#[derive(Clone, Copy, Debug, Default)]
-pub struct QueryOptions {
+#[derive(Clone, Debug, Default)]
+pub(crate) struct QueryOptions {
     pub limit: Option<usize>,
+    pub filter: Option<Vec<PushableFilter>>,
     pub offset: usize,
 }
 use std::collections::BTreeMap;
 use std::fmt::Display;
 
 use oxrdf::Triple;
+
+use crate::db::models::filter::PushableFilter;
 
 /// One row of a SPARQL solution.
 #[derive(Debug, Clone, PartialEq)]

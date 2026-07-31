@@ -1,8 +1,8 @@
-use crate::StoreError;
 use crate::db::models::query::{QueryOptions, Solution, SolutionBuilder, Term};
 use crate::db::models::relation::{Relation, RelationTripleQuery};
 use crate::store::TripleStore;
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, alias};
+use crate::StoreError;
+use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use log::{debug, info};
 
 impl TripleStore {
@@ -53,7 +53,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn query_relation_triples_joined(
+    pub(crate) fn query_relation_triples_joined(
         &mut self,
         query: RelationTripleQuery,
         options: QueryOptions,
@@ -135,6 +135,9 @@ impl TripleStore {
                 relation_query =
                     relation_query.filter(object_objects.field(objects::iri).eq_any(iris))
             }
+        }
+        if let Some(filters) = options.filter {
+            for filter in filters {}
         }
         if let Some(lim) = options.limit {
             relation_query = relation_query.limit(lim as i64);
