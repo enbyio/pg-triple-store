@@ -1,0 +1,4 @@
+CREATE TABLE objects (
+  id    BIGSERIAL PRIMARY KEY,
+  iri   TEXT UNIQUE NOT NULL
+);
