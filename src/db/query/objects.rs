@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 
 use crate::db::error::StoreError;
@@ -42,5 +44,22 @@ impl TripleStore {
             .optional()
             .inspect_err(|e| log::error!("Failed to query DB for object: {:?}", e))
             .ok()?
+    }
+
+    pub fn batch_upsert_objects(
+        &mut self,
+        object_iris: HashSet<NewObject>,
+    ) -> Result<HashMap<String, i64>, StoreError> {
+        let values: Vec<NewObject> = object_iris.into_iter().collect();
+        let mut conn = self.conn()?;
+        Ok(diesel::insert_into(objects)
+            .values(&values)
+            .on_conflict(iri)
+            .do_update()
+            .set(iri.eq(iri))
+            .returning((iri, id))
+            .get_results::<(String, i64)>(&mut conn)?
+            .into_iter()
+            .collect())
     }
 }

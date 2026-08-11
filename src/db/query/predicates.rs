@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::db::error::StoreError;
 use crate::db::model::predicate::{NewPredicate, Predicate};
 use crate::db::store::TripleStore;
@@ -44,5 +46,23 @@ impl TripleStore {
             .optional()
             .inspect_err(|e| log::error!("Failed to query DB for object: {:?}", e))
             .ok()?
+    }
+
+    pub fn batch_upsert_predicates(
+        &mut self,
+        object_iris: HashSet<NewPredicate>,
+    ) -> Result<HashMap<String, i64>, StoreError> {
+        let mut conn = self.conn()?;
+        let values: Vec<NewPredicate> = object_iris.into_iter().collect();
+
+        Ok(diesel::insert_into(predicates)
+            .values(&values)
+            .on_conflict(iri)
+            .do_update()
+            .set(iri.eq(iri))
+            .returning((iri, id))
+            .get_results::<(String, i64)>(&mut conn)?
+            .into_iter()
+            .collect())
     }
 }

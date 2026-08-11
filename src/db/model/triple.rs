@@ -1,5 +1,9 @@
 use std::fmt::Display;
 
+use oxrdf::NamedOrBlankNode;
+
+use crate::db::error::StoreError;
+
 pub enum TripleQuery {
     PropertyTripleQuery {
         subject: TriplePosition,
@@ -47,6 +51,19 @@ impl Display for Term {
                 // }
                 write!(f, "{value}")
             }
+        }
+    }
+}
+
+pub trait AsIri {
+    fn as_iri(&self) -> Result<&str, StoreError>;
+}
+
+impl AsIri for NamedOrBlankNode {
+    fn as_iri(&self) -> Result<&str, StoreError> {
+        match self {
+            NamedOrBlankNode::NamedNode(named_node) => Ok(named_node.as_str()),
+            NamedOrBlankNode::BlankNode(_) => Err(StoreError::data_error("Unsupported Input Data")),
         }
     }
 }

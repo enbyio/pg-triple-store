@@ -1,9 +1,14 @@
+use std::collections::HashSet;
+
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods, alias};
+use oxrdf::Triple;
 
 use crate::db::error::StoreError;
+use crate::db::model::object::NewObject;
+use crate::db::model::predicate::NewPredicate;
 use crate::db::model::property::Property;
 use crate::db::model::relation::Relation;
-use crate::db::model::triple::{LiteralMatchMode, Term, TriplePosition, TripleQuery};
+use crate::db::model::triple::{AsIri, LiteralMatchMode, Term, TriplePosition, TripleQuery};
 use crate::db::query::solution::{Solution, SolutionBuilder};
 use crate::db::store::{PgPooledConnection, TripleStore};
 
@@ -53,7 +58,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn batch_create_relation_triple(&mut self, rels: &[Relation]) -> Result<(), StoreError> {
+    pub fn batch_create_relation_triples(&mut self, rels: &[Relation]) -> Result<(), StoreError> {
         use crate::schema::relations::dsl::*;
         let mut conn = self.conn()?;
         let affected_rows = diesel::insert_into(relations)
@@ -65,6 +70,51 @@ impl TripleStore {
             rels.len(),
             affected_rows
         );
+        Ok(())
+    }
+
+    pub fn batch_upsert_triples(&mut self, triples: &[Triple]) -> Result<(), StoreError> {
+        let mut predicates: HashSet<NewPredicate> = HashSet::new();
+        let mut objects: HashSet<NewObject> = HashSet::new();
+        for triple in triples {
+            objects.insert(triple.subject.as_iri()?.into());
+            predicates.insert(triple.predicate.as_str().into());
+            if let oxrdf::Term::NamedNode(val) = &triple.object {
+                objects.insert(val.as_str().to_string().as_str().into());
+            }
+        }
+        log::info!("Found {} unique objects", objects.len());
+        log::info!("Found {} unique predicates", predicates.len());
+        let predicate_ids = self.batch_upsert_predicates(predicates)?;
+        let object_ids = self.batch_upsert_objects(objects)?;
+        let mut relations: Vec<Relation> = Vec::new();
+        let mut properties: Vec<Property> = Vec::new();
+        for triple in triples {
+            if let Some(&subject) = object_ids.get(triple.subject.as_iri()?)
+                && let Some(&predicate) = predicate_ids.get(triple.predicate.as_str())
+            {
+                match &triple.object {
+                    oxrdf::Term::NamedNode(named_node) => {
+                        if let Some(&object) = object_ids.get(named_node.as_str()) {
+                            relations.push(Relation::new(subject, predicate, object));
+                        } else {
+                            log::error!("could not find id for the iri {}", named_node)
+                        }
+                    }
+                    oxrdf::Term::Literal(literal) => properties.push(Property::new(
+                        subject,
+                        predicate,
+                        literal.value().to_string(),
+                        Some(literal.datatype().as_str().to_string()),
+                    )),
+                    _ => log::error!("Blank Node and Triples in Triples are not supported yet"),
+                }
+            } else {
+                log::error!("missing either subject or predicate id");
+            }
+        }
+        self.batch_create_relation_triples(&relations)?;
+        self.batch_create_property_triples(&properties)?;
         Ok(())
     }
 

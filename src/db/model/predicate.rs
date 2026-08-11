@@ -1,6 +1,6 @@
-use diesel::Selectable;
 use diesel::deserialize::Queryable;
 use diesel::prelude::Insertable;
+use diesel::Selectable;
 
 use crate::schema::predicates;
 
@@ -27,5 +27,11 @@ pub struct NewPredicate {
 impl NewPredicate {
     pub fn new(iri: String) -> Self {
         Self { iri }
+    }
+}
+
+impl From<&str> for NewPredicate {
+    fn from(value: &str) -> Self {
+        Self::new(value.to_string())
     }
 }
