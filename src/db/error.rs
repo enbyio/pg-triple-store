@@ -11,6 +11,8 @@ pub struct StoreError {
 #[derive(Debug)]
 pub enum StoreErrorKind {
     DatabaseError(DatabaseError),
+    DataError,
+    SparqlError,
 }
 
 #[derive(Debug)]
@@ -30,10 +32,34 @@ impl StoreError {
             location: Location::caller(),
         }
     }
+
+    #[track_caller]
+    pub fn sparql_error(msg: impl Display) -> Self {
+        Self {
+            kind: StoreErrorKind::SparqlError,
+            msg: msg.to_string(),
+            location: Location::caller(),
+        }
+    }
+
+    #[track_caller]
+    pub fn data_error(msg: impl Display) -> Self {
+        Self {
+            kind: StoreErrorKind::DataError,
+            msg: msg.to_string(),
+            location: Location::caller(),
+        }
+    }
 }
 
 impl From<diesel::result::Error> for StoreError {
     fn from(value: diesel::result::Error) -> Self {
         StoreError::db_error(DatabaseError::DieselError, value)
+    }
+}
+
+impl From<spargebra::SparqlSyntaxError> for StoreError {
+    fn from(value: spargebra::SparqlSyntaxError) -> Self {
+        StoreError::sparql_error(format!("Error whilst parsing Sparql Input {value}"))
     }
 }

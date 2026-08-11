@@ -1,4 +1,4 @@
-use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods, alias};
 
 use crate::db::error::StoreError;
 use crate::db::model::property::Property;
@@ -94,7 +94,7 @@ impl TripleStore {
     }
 }
 
-fn query_relation_triples(
+pub(crate) fn query_relation_triples(
     conn: &mut PgPooledConnection,
     subject: TriplePosition,
     predicate: TriplePosition,
@@ -176,7 +176,7 @@ fn query_relation_triples(
     Ok(builder.get_rel_solutions(relation_query.load::<(String, String, String)>(conn)?))
 }
 
-fn query_property_triples(
+pub(crate) fn query_property_triples(
     conn: &mut PgPooledConnection,
     subject: TriplePosition,
     predicate: TriplePosition,

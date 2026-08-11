@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::fmt::Display;
 
+use oxrdf::Triple;
+
 use crate::db::model::triple::Term;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -101,5 +103,45 @@ impl SolutionBuilder {
                 Solution::new(map)
             })
             .collect()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct SolutionSet {
+    pub vars: Vec<String>,
+    pub rows: Vec<Solution>,
+}
+
+#[derive(Debug)]
+pub enum QueryResult {
+    Solutions(SolutionSet),
+    Boolean(bool),
+    Graph(Vec<Triple>),
+}
+
+impl Display for QueryResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            QueryResult::Solutions(solution_set) => {
+                let sol = solution_set
+                    .rows
+                    .iter()
+                    .map(|row| {
+                        solution_set
+                            .vars
+                            .iter()
+                            .map(|var| format!("{}: {}", var, row.bindings.get(var).unwrap()))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    })
+                    .collect::<Vec<String>>()
+                    .join("), (");
+                write!(f, "{:?}: [({})]", solution_set.vars, sol)
+            }
+            QueryResult::Boolean(val) => write!(f, "{val}"),
+            QueryResult::Graph(graph) => {
+                write!(f, "Graph output is not supported yet: {:?}", graph)
+            }
+        }
     }
 }
