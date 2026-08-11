@@ -1,15 +1,15 @@
 use std::time::Duration;
 
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::PgConnection;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 
-use crate::StoreError;
+use crate::db::error::{DatabaseError, StoreError};
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-pub type PgPool = Pool<ConnectionManager<PgConnection>>;
-pub type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
+pub(crate) type PgPool = Pool<ConnectionManager<PgConnection>>;
+pub(crate) type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
 
 pub struct TripleStore {
     pool: PgPool,
@@ -23,7 +23,7 @@ impl TripleStore {
             .max_size(10)
             .min_idle(Some(1))
             .build(manager)
-            .map_err(|e| StoreError::ConnectionError(e.to_string()))?;
+            .map_err(|e| StoreError::db_error(DatabaseError::ConnectionError, e))?;
         let mut db = Self { pool };
         db.migrate()?;
         Ok(db)
@@ -31,22 +31,26 @@ impl TripleStore {
 
     pub fn new_from_env() -> Result<Self, StoreError> {
         dotenvy::dotenv().ok();
-        let url = std::env::var("DATABASE_URL")
-            .map_err(|_| StoreError::GeneralError("DATABASE_URL is not set".into()))?;
+        let url = std::env::var("DATABASE_URL").map_err(|_| {
+            StoreError::db_error(
+                DatabaseError::ConfigurationError,
+                "env var DATABASE_URL is not set",
+            )
+        })?;
         Self::new(&url)
     }
 
     pub fn migrate(&mut self) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         conn.run_pending_migrations(MIGRATIONS)
-            .map_err(|e| StoreError::MigrationError(e.to_string()))?;
+            .map_err(|e| StoreError::db_error(DatabaseError::MigrationError, e))?;
         Ok(())
     }
 
     pub fn revert_migrations(&mut self) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         conn.revert_all_migrations(MIGRATIONS)
-            .map_err(|e| StoreError::MigrationError(e.to_string()))?;
+            .map_err(|e| StoreError::db_error(DatabaseError::MigrationError, e))?;
         Ok(())
     }
 
@@ -58,6 +62,6 @@ impl TripleStore {
     pub(crate) fn conn(&self) -> Result<PgPooledConnection, StoreError> {
         self.pool
             .get()
-            .map_err(|e| StoreError::ConnectionError(e.to_string()))
+            .map_err(|e| StoreError::db_error(DatabaseError::ConnectionError, e))
     }
 }

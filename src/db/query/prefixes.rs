@@ -1,10 +1,9 @@
 use diesel::upsert::excluded;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
-use crate::db::models::prefix::Prefix;
-use crate::store::TripleStore;
-use crate::StoreError;
-
+use crate::db::error::StoreError;
+use crate::db::model::prefix::Prefix;
+use crate::db::store::TripleStore;
 use crate::schema::prefixes::dsl::*;
 
 impl TripleStore {
@@ -21,8 +20,8 @@ impl TripleStore {
 
     pub fn get_absolute_form(&self, iri: String) -> Result<String, StoreError> {
         let mut conn = self.conn()?;
-        let short_prefix = iri.split_once(":").ok_or(StoreError::DataError(
-            "short iri does not contain a : and is invalid".to_string(),
+        let short_prefix = iri.split_once(":").ok_or(StoreError::data_error(
+            "short iri does not contain a : and is invalid",
         ))?;
         println!("{} - {}", short_prefix.0, short_prefix.1);
         let long_prefix = prefixes
@@ -34,7 +33,8 @@ impl TripleStore {
 
     pub fn get_all_prefixes(&mut self) -> Result<Vec<(String, String)>, StoreError> {
         let mut conn = self.conn()?;
-        Ok(prefixes.select((namespace, prefix))
+        Ok(prefixes
+            .select((namespace, prefix))
             .load::<(String, String)>(&mut conn)?)
     }
 
@@ -42,11 +42,10 @@ impl TripleStore {
         let mut best: Option<(String, String)> = None;
         let mut longest_fit: usize = 0;
         for (ns, pfx) in self.get_all_prefixes()? {
-            if iri.starts_with(ns.as_str())
-                && ns.len() > longest_fit {
-                    best = Some((ns.clone(), pfx.clone()));
-                        longest_fit = ns.len();
-                }
+            if iri.starts_with(ns.as_str()) && ns.len() > longest_fit {
+                best = Some((ns.clone(), pfx.clone()));
+                longest_fit = ns.len();
+            }
         }
         Ok(match best {
             Some((ns, pfx)) => {
@@ -74,12 +73,12 @@ impl TripleStore {
             return Ok(trimmed.to_string());
         }
         if let Some((prefix_part, _)) = trimmed.split_once(':')
-            && !prefix_part.contains('/') {
-                return self.get_absolute_form(trimmed.to_string());
-            }
-        Err(StoreError::DataError(format!(
-            "Cannot normalize IRI: '{}'",
-            raw_iri
+            && !prefix_part.contains('/')
+        {
+            return self.get_absolute_form(trimmed.to_string());
+        }
+        Err(StoreError::data_error(format!(
+            "Cannot normalize IRI: '{raw_iri}'"
         )))
     }
 }

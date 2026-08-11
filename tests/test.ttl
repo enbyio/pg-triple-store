@@ -1,0 +1,31 @@
+@prefix ex:  <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ── People ────────────────────────────────────────────────────────────────────
+ex:alice ex:knows    ex:bob ;
+         ex:knows    ex:carol ;
+         ex:name     "Alice" ;
+         ex:age      "30"^^xsd:integer ;
+         ex:score    "9.5"^^xsd:decimal .
+
+ex:bob   ex:knows    ex:carol ;
+         ex:knows    ex:dave ;
+         ex:name     "Bob" ;
+         ex:age      "25"^^xsd:integer ;
+         ex:score    "7.0"^^xsd:decimal .
+
+ex:carol ex:knows    ex:dave ;
+         ex:name     "Carol" ;
+         ex:age      "25"^^xsd:integer ;
+         ex:score    "8.0"^^xsd:decimal .
+
+# Dave intentionally has no age or score so BOUND() tests work.
+ex:dave  ex:name     "Dave" .
+
+# ── Organisations ─────────────────────────────────────────────────────────────
+ex:alice ex:worksAt  ex:orgA .
+ex:bob   ex:worksAt  ex:orgA .
+ex:carol ex:worksAt  ex:orgB .
+
+ex:orgA  ex:partOf   ex:consortium .
+ex:orgB  ex:partOf   ex:consortium .

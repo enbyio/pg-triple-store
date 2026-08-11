@@ -1,23 +1,23 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::db::error::StoreError;
+use crate::db::model::predicate::{NewPredicate, Predicate};
+use crate::db::store::TripleStore;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use log::error;
-
-use crate::db::models::predicate::{NewPredicate, Predicate};
-use crate::store::TripleStore;
-use crate::StoreError;
 
 use crate::schema::predicates::dsl::*;
 
 impl TripleStore {
+    /** Checks if a predicate with a given iri exists and if not inserts it. ID of the predicate is returned either way
+     */
     pub fn upsert_predicate(
         &mut self,
         predicate_iri: impl Into<NewPredicate>,
     ) -> Result<i64, StoreError> {
         let mut conn = self.conn()?;
-        let predicate_iri = predicate_iri.into().iri;
+        let predicate_iri = predicate_iri.into();
         if let Some(existing_id) = predicates
-            .filter(iri.eq(&predicate_iri))
+            .filter(iri.eq(&predicate_iri.iri))
             .select(id)
             .first::<i64>(&mut conn)
             .optional()?
@@ -25,12 +25,27 @@ impl TripleStore {
             return Ok(existing_id);
         }
         Ok(diesel::insert_into(predicates)
-            .values(iri.eq(&predicate_iri))
-            .on_conflict(iri)
-            .do_update()
-            .set(iri.eq(&predicate_iri))
+            .values(&predicate_iri)
+            .on_conflict_do_nothing()
             .get_result::<Predicate>(&mut conn)?
             .id)
+    }
+
+    /** checks if a predicate exists and returns either said objects id or none, if the object doesn't exist
+     */
+    pub fn get_predicate_id(&mut self, predicate_iri: impl Into<String>) -> Option<i64> {
+        let predicate_iri = predicate_iri.into();
+        let mut conn = self
+            .conn()
+            .inspect_err(|e| log::error!("Failed to establish connection: {:?}", e))
+            .ok()?;
+        predicates
+            .filter(iri.eq(predicate_iri))
+            .select(id)
+            .first::<i64>(&mut conn)
+            .optional()
+            .inspect_err(|e| log::error!("Failed to query DB for object: {:?}", e))
+            .ok()?
     }
 
     pub fn batch_upsert_predicates(
@@ -49,19 +64,5 @@ impl TripleStore {
             .get_results::<(String, i64)>(&mut conn)?
             .into_iter()
             .collect())
-    }
-
-    pub fn get_predicate_id(&mut self, predicate_iri: &str) -> Option<i64> {
-        let mut conn = self.conn().ok()?;
-
-        let res = predicates
-            .filter(iri.eq(predicate_iri))
-            .select(id)
-            .first::<i64>(&mut conn)
-            .optional();
-        if let Err(e) = &res {
-            error!("Error trying to get object id {e:?}");
-        }
-        res.ok()?
     }
 }

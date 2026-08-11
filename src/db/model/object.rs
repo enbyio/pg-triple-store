@@ -4,6 +4,9 @@ use diesel::Selectable;
 
 use crate::schema::objects;
 
+/** An object with iri and id
+ *  "id" is the primary key in the table
+ */
 #[derive(Queryable, Selectable, Debug, Hash)]
 #[diesel(table_name=objects)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -12,6 +15,8 @@ pub struct Object {
     pub iri: String,
 }
 
+/** The insertable type for object, takes only the iri and autofills the id
+ */
 #[derive(Insertable, PartialEq, Eq, Hash)]
 #[diesel(table_name=objects)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -22,12 +27,6 @@ pub struct NewObject {
 impl NewObject {
     pub fn new(iri: String) -> Self {
         Self { iri }
-    }
-}
-
-impl From<String> for NewObject {
-    fn from(value: String) -> Self {
-        Self::new(value)
     }
 }
 
