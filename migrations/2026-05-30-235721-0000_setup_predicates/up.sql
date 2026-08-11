@@ -1,4 +1,0 @@
-CREATE TABLE predicates (
-  id    BIGSERIAL PRIMARY KEY,
-  iri   TEXT UNIQUE NOT NULL
-);
