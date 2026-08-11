@@ -15,7 +15,8 @@ use crate::db::store::TripleStore;
 impl TripleStore {
     pub fn parse_sparql_query(&mut self, sparql: &str) -> Result<QueryResult, StoreError> {
         let parser = SparqlParser::new();
-        let query = parser.parse_query(&self.inject_prefixes(sparql)?.to_string())?;
+        let prefix_injected_query = self.inject_prefixes(sparql)?;
+        let query = parser.parse_query(&prefix_injected_query)?;
         match query {
             Query::Select { pattern, .. } => self.execute_pattern(pattern),
             Query::Construct { .. } => {
