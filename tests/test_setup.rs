@@ -1,5 +1,5 @@
-use pg_triple_store::db::query::solution::{QueryResult, SolutionSet};
-use pg_triple_store::db::store::TripleStore;
+use pg_triple_store::query::solution::{QueryResult, SolutionSet};
+use pg_triple_store::store::TripleStore;
 
 fn init_store() -> TripleStore {
     let _ = env_logger::Builder::from_default_env()
