@@ -1,6 +1,6 @@
-pub mod filter;
-pub mod objects;
-pub mod predicates;
-pub mod prefixes;
+pub(crate) mod filter;
+pub(crate) mod objects;
+pub(crate) mod predicates;
+pub(crate) mod prefixes;
 pub mod solution;
-pub mod triples;
+pub(crate) mod triples;
