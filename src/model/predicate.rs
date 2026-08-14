@@ -1,11 +1,12 @@
-use diesel::Selectable;
 use diesel::deserialize::Queryable;
 use diesel::prelude::Insertable;
+use diesel::Selectable;
 
 use crate::schema::predicates;
 
 /// A predicate with iri and id
 ///  "id" is the primary key in the table
+#[allow(dead_code)]
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name=predicates)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

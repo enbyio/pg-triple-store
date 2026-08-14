@@ -1,4 +1,4 @@
-pub mod api;
+pub(crate) mod api;
 pub mod error;
 pub(crate) mod model;
 pub(crate) mod parsers;

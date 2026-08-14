@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use diesel::PgConnection;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
+use diesel::PgConnection;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::error::{DatabaseError, StoreError};
 
@@ -13,6 +13,12 @@ pub(crate) type PgPooledConnection = PooledConnection<ConnectionManager<PgConnec
 
 pub struct TripleStore {
     pool: PgPool,
+}
+
+/// allows for selecting whether to target objects or predicates in api functions
+pub enum ElementType {
+    Object,
+    Predicate,
 }
 
 impl TripleStore {

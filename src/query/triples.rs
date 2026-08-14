@@ -8,7 +8,7 @@ use crate::model::object::NewObject;
 use crate::model::predicate::NewPredicate;
 use crate::model::property::Property;
 use crate::model::relation::Relation;
-use crate::model::triple::{AsIri, LiteralMatchMode, Term, TriplePosition, TripleQuery};
+use crate::model::triple::{AsIri, LiteralMatchMode, Term, TriplePosition};
 use crate::query::solution::{Solution, SolutionBuilder};
 use crate::store::{PgPooledConnection, TripleStore};
 
@@ -147,33 +147,6 @@ impl TripleStore {
         self.batch_create_relation_triples(&relations)?;
         self.batch_create_property_triples(&properties)?;
         Ok(())
-    }
-
-    /// takes a triple query and queries the relevant table depending on the type of the triple
-    pub(crate) fn query_triple_store(
-        &mut self,
-        triple: TripleQuery,
-    ) -> Result<Vec<Solution>, StoreError> {
-        let mut conn = self.conn()?;
-        match triple {
-            TripleQuery::PropertyTripleQuery {
-                subject,
-                predicate,
-                object,
-            } => query_relation_triples(&mut conn, subject, predicate, object),
-            TripleQuery::RelationTripleQuery {
-                subject,
-                predicate,
-                object_value,
-                object_match_mode,
-            } => query_property_triples(
-                &mut conn,
-                subject,
-                predicate,
-                object_value,
-                object_match_mode,
-            ),
-        }
     }
 }
 

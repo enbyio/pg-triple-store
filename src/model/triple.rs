@@ -4,24 +4,11 @@ use oxrdf::NamedOrBlankNode;
 
 use crate::error::StoreError;
 
-pub enum TripleQuery {
-    PropertyTripleQuery {
-        subject: TriplePosition,
-        predicate: TriplePosition,
-        object: TriplePosition,
-    },
-    RelationTripleQuery {
-        subject: TriplePosition,
-        predicate: TriplePosition,
-        object_value: TriplePosition,
-        object_match_mode: LiteralMatchMode,
-    },
-}
-
 #[derive(Default, PartialEq, Eq)]
 pub enum LiteralMatchMode {
     #[default]
     Exact,
+    #[allow(dead_code)]
     Contains,
 }
 
