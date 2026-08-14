@@ -1,3 +1,4 @@
+pub(crate) mod describe;
 pub(crate) mod filter;
 pub(crate) mod objects;
 pub(crate) mod predicates;

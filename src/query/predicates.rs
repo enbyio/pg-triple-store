@@ -8,9 +8,8 @@ use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
 use crate::schema::predicates::dsl::*;
 
 impl TripleStore {
-    /** Checks if a predicate with a given iri exists and if not inserts it. ID of the predicate is returned either way
-     */
-    pub fn upsert_predicate(
+    /// Checks if a predicate with a given iri exists and if not inserts it. ID of the predicate is returned either way
+    pub(crate) fn upsert_predicate(
         &mut self,
         predicate_iri: impl Into<NewPredicate>,
     ) -> Result<i64, StoreError> {
@@ -31,9 +30,8 @@ impl TripleStore {
             .id)
     }
 
-    /** checks if a predicate exists and returns either said objects id or none, if the object doesn't exist
-     */
-    pub fn get_predicate_id(&mut self, predicate_iri: impl Into<String>) -> Option<i64> {
+    /// checks if a predicate exists and returns either said objects id or none, if the object doesn't exist
+    pub(crate) fn get_predicate_id(&mut self, predicate_iri: impl Into<String>) -> Option<i64> {
         let predicate_iri = predicate_iri.into();
         let mut conn = self
             .conn()
@@ -48,7 +46,7 @@ impl TripleStore {
             .ok()?
     }
 
-    pub fn batch_upsert_predicates(
+    pub(crate) fn batch_upsert_predicates(
         &mut self,
         object_iris: HashSet<NewPredicate>,
     ) -> Result<HashMap<String, i64>, StoreError> {

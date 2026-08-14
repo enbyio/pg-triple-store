@@ -1,5 +1,6 @@
+pub(crate) mod api;
 pub mod error;
-pub mod model;
+pub(crate) mod model;
 pub(crate) mod parsers;
 pub mod query;
 pub(crate) mod schema;

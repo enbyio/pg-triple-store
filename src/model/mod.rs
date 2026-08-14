@@ -1,6 +1,6 @@
-pub mod object;
-pub mod predicate;
-pub mod prefix;
-pub mod property;
-pub mod relation;
-pub mod triple;
+pub(crate) mod object;
+pub(crate) mod predicate;
+pub(crate) mod prefix;
+pub(crate) mod property;
+pub(crate) mod relation;
+pub(crate) mod triple;

@@ -3,11 +3,11 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::error::StoreError;
 use crate::model::prefix::Prefix;
-use crate::store::TripleStore;
 use crate::schema::prefixes::dsl::*;
+use crate::store::TripleStore;
 
 impl TripleStore {
-    pub fn import_prefixes(&mut self, prefix_list: Vec<Prefix>) -> Result<(), StoreError> {
+    pub(crate) fn import_prefixes(&mut self, prefix_list: Vec<Prefix>) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         diesel::insert_into(prefixes)
             .values(prefix_list)
@@ -18,7 +18,19 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn get_absolute_form(&self, iri: String) -> Result<String, StoreError> {
+    pub(crate) fn upsert_prefix(&mut self, pfx: String, nsp: String) -> Result<(), StoreError> {
+        let prefix_new = Prefix::new(nsp, pfx);
+        let mut conn = self.conn()?;
+        diesel::insert_into(prefixes)
+            .values(prefix_new)
+            .on_conflict(namespace)
+            .do_update()
+            .set(prefix.eq(excluded(prefix)))
+            .execute(&mut conn)?;
+        Ok(())
+    }
+
+    pub(crate) fn get_absolute_form(&self, iri: String) -> Result<String, StoreError> {
         let mut conn = self.conn()?;
         let short_prefix = iri.split_once(":").ok_or(StoreError::data_error(
             "short iri does not contain a : and is invalid",
@@ -31,14 +43,14 @@ impl TripleStore {
         Ok(format!("{}{}", long_prefix, short_prefix.1))
     }
 
-    pub fn get_all_prefixes(&mut self) -> Result<Vec<(String, String)>, StoreError> {
+    pub(crate) fn get_all_prefixes(&mut self) -> Result<Vec<(String, String)>, StoreError> {
         let mut conn = self.conn()?;
         Ok(prefixes
             .select((namespace, prefix))
             .load::<(String, String)>(&mut conn)?)
     }
 
-    pub fn shorten_iri(&mut self, iri: String) -> Result<String, StoreError> {
+    pub(crate) fn shorten_iri(&mut self, iri: String) -> Result<String, StoreError> {
         let mut best: Option<(String, String)> = None;
         let mut longest_fit: usize = 0;
         for (ns, pfx) in self.get_all_prefixes()? {

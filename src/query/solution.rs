@@ -29,26 +29,26 @@ impl Display for Solution {
 }
 
 #[derive(Default)]
-pub struct SolutionBuilder {
+pub(crate) struct SolutionBuilder {
     pub subject_name: Option<String>,
     pub predicate_name: Option<String>,
     pub object_name: Option<String>,
 }
 
 impl SolutionBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
-    pub fn subject(&mut self, value: String) {
+    pub(crate) fn subject(&mut self, value: String) {
         self.subject_name = Some(value);
     }
 
-    pub fn predicate(&mut self, value: String) {
+    pub(crate) fn predicate(&mut self, value: String) {
         self.predicate_name = Some(value);
     }
 
-    pub fn object(&mut self, value: String) {
+    pub(crate) fn object(&mut self, value: String) {
         self.object_name = Some(value);
     }
 

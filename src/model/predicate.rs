@@ -4,9 +4,9 @@ use diesel::Selectable;
 
 use crate::schema::predicates;
 
-/** A predicate with iri and id
- *  "id" is the primary key in the table
- */
+/// A predicate with iri and id
+///  "id" is the primary key in the table
+#[allow(dead_code)]
 #[derive(Queryable, Selectable, Debug)]
 #[diesel(table_name=predicates)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -15,8 +15,7 @@ pub struct Predicate {
     pub iri: String,
 }
 
-/** The insertable type for object, takes only the iri and autofills the id
- */
+/// The insertable type for object, takes only the iri and autofills the id
 #[derive(Insertable, Hash, PartialEq, Eq)]
 #[diesel(table_name=predicates)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

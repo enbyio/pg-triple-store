@@ -6,16 +6,26 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::error::{DatabaseError, StoreError};
 
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 pub(crate) type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub(crate) type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
 
+/// Centerpiece of this library. This processes sparql queries / other functions.
 pub struct TripleStore {
     pool: PgPool,
 }
 
+/// Allows for selecting whether to target objects or predicates in api functions.
+pub enum ElementType {
+    Object,
+    Predicate,
+}
+
 impl TripleStore {
+    /// Creates database connection from url of format:
+    /// postgres://postgres:yourpassword@localhost:5432/triple_store \
+    /// Checks if all tables exist correctly (and if not applies the required migrations)
     pub fn new(database_url: &str) -> Result<Self, StoreError> {
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         let pool = Pool::builder()
@@ -29,6 +39,9 @@ impl TripleStore {
         Ok(db)
     }
 
+    /// Creates database connection from url of format in env var **$DATABASE_URL**:
+    /// postgres://postgres:yourpassword@localhost:5432/triple_store \
+    /// Checks if all tables exist correctly (and if not applies the required migrations)
     pub fn new_from_env() -> Result<Self, StoreError> {
         dotenvy::dotenv().ok();
         let url = std::env::var("DATABASE_URL").map_err(|_| {
@@ -40,6 +53,8 @@ impl TripleStore {
         Self::new(&url)
     }
 
+    /// Manually run database migrations.
+    /// This is non-destructive and only ensures all migrations are correctly run.
     pub fn migrate(&mut self) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         conn.run_pending_migrations(MIGRATIONS)
@@ -47,13 +62,14 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn revert_migrations(&mut self) -> Result<(), StoreError> {
+    fn revert_migrations(&mut self) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         conn.revert_all_migrations(MIGRATIONS)
             .map_err(|e| StoreError::db_error(DatabaseError::MigrationError, e))?;
         Ok(())
     }
-
+    /// **Warning**: this will wipe the data in your db*
+    /// Revert migrations to delete existing tables and then apply migrations again.
     pub fn reset_db(&mut self) -> Result<(), StoreError> {
         self.revert_migrations()?;
         self.migrate()
