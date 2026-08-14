@@ -38,7 +38,7 @@ impl TripleStore {
     }
 
     /// Returns the id for a given iri (object or predicate). \
-    /// *Note:* currently not much useful, but will be used for the describe function added soon.
+    /// Used for the describe id function.
     pub fn get_id_from_iri(&mut self, iri: impl Into<String>, id_type: ElementType) -> Option<i64> {
         match id_type {
             ElementType::Object => self.get_object_id(iri.into()),
