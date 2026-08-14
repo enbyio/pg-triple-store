@@ -6,7 +6,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::error::{DatabaseError, StoreError};
 
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 pub(crate) type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub(crate) type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
