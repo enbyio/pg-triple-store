@@ -18,7 +18,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub(crate) fn add_prefix(&mut self, pfx: String, nsp: String) -> Result<(), StoreError> {
+    pub(crate) fn upsert_prefix(&mut self, pfx: String, nsp: String) -> Result<(), StoreError> {
         let prefix_new = Prefix::new(nsp, pfx);
         let mut conn = self.conn()?;
         diesel::insert_into(prefixes)
