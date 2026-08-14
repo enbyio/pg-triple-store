@@ -47,7 +47,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn revert_migrations(&mut self) -> Result<(), StoreError> {
+    fn revert_migrations(&mut self) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         conn.revert_all_migrations(MIGRATIONS)
             .map_err(|e| StoreError::db_error(DatabaseError::MigrationError, e))?;
