@@ -45,4 +45,10 @@ impl TripleStore {
             ElementType::Predicate => self.get_predicate_id(iri.into()),
         }
     }
+
+    /// Describe an object (aka return all relations and properties of said object).
+    /// Returns a list of all triples with this id either as the subject or object (in the relations)
+    pub fn describe_object_by_id(&mut self, id: i64) -> Result<Vec<Triple>, StoreError> {
+        self.describe_object_id(id)
+    }
 }
