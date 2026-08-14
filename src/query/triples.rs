@@ -13,7 +13,7 @@ use crate::query::solution::{Solution, SolutionBuilder};
 use crate::store::{PgPooledConnection, TripleStore};
 
 impl TripleStore {
-    pub fn create_property_triple(&mut self, property: Property) -> Result<(), StoreError> {
+    pub(crate) fn create_property_triple(&mut self, property: Property) -> Result<(), StoreError> {
         use crate::schema::properties::dsl::*;
         let mut conn = self.conn()?;
         let affected_rows = diesel::insert_into(properties)
@@ -28,7 +28,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn batch_create_property_triples(&mut self, props: &[Property]) -> Result<(), StoreError> {
+    pub(crate) fn batch_create_property_triples(&mut self, props: &[Property]) -> Result<(), StoreError> {
         use crate::schema::properties::dsl::*;
         let mut conn = self.conn()?;
         let affected_rows = diesel::insert_into(properties)
@@ -43,7 +43,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn create_relation_triple(&mut self, relation: Relation) -> Result<(), StoreError> {
+    pub(crate) fn create_relation_triple(&mut self, relation: Relation) -> Result<(), StoreError> {
         use crate::schema::relations::dsl::*;
         let mut conn = self.conn()?;
         let affected_rows = diesel::insert_into(relations)
@@ -118,9 +118,8 @@ impl TripleStore {
         Ok(())
     }
 
-    /** takes a triple query and queries the relevant table depending on the type of the triple
-     */
-    pub fn query_triple_store(&mut self, triple: TripleQuery) -> Result<Vec<Solution>, StoreError> {
+    /// takes a triple query and queries the relevant table depending on the type of the triple
+    pub(crate) fn query_triple_store(&mut self, triple: TripleQuery) -> Result<Vec<Solution>, StoreError> {
         let mut conn = self.conn()?;
         match triple {
             TripleQuery::PropertyTripleQuery {
