@@ -3,8 +3,8 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::error::StoreError;
 use crate::model::prefix::Prefix;
-use crate::store::TripleStore;
 use crate::schema::prefixes::dsl::*;
+use crate::store::TripleStore;
 
 impl TripleStore {
     pub(crate) fn import_prefixes(&mut self, prefix_list: Vec<Prefix>) -> Result<(), StoreError> {
@@ -14,6 +14,17 @@ impl TripleStore {
             .on_conflict(namespace)
             .do_update()
             .set(prefix.eq(excluded(prefix)))
+            .execute(&mut conn)?;
+        Ok(())
+    }
+
+    pub(crate) fn add_prefix(&mut self, pfx: String, nsp: String) -> Result<(), StoreError> {
+        let prefix_new = Prefix::new(nsp, pfx);
+        let mut conn = self.conn()?;
+        diesel::insert_into(prefixes)
+            .values(prefix_new)
+            .on_conflict(namespace)
+            .do_update().set(prefix.eq(excluded(prefix)))
             .execute(&mut conn)?;
         Ok(())
     }

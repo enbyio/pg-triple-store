@@ -28,7 +28,10 @@ impl TripleStore {
         Ok(())
     }
 
-    pub(crate) fn batch_create_property_triples(&mut self, props: &[Property]) -> Result<(), StoreError> {
+    pub(crate) fn batch_create_property_triples(
+        &mut self,
+        props: &[Property],
+    ) -> Result<(), StoreError> {
         use crate::schema::properties::dsl::*;
         let mut conn = self.conn()?;
         let affected_rows = diesel::insert_into(properties)
@@ -58,7 +61,10 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn batch_create_relation_triples(&mut self, rels: &[Relation]) -> Result<(), StoreError> {
+    pub(crate) fn batch_create_relation_triples(
+        &mut self,
+        rels: &[Relation],
+    ) -> Result<(), StoreError> {
         use crate::schema::relations::dsl::*;
         let mut conn = self.conn()?;
         let affected_rows = diesel::insert_into(relations)
@@ -73,14 +79,39 @@ impl TripleStore {
         Ok(())
     }
 
-    pub fn batch_upsert_triples(&mut self, triples: &[Triple]) -> Result<(), StoreError> {
+    pub(crate) fn upsert_triple(&mut self, triple: Triple) -> Result<(), StoreError> {
+        let subject_id = self.upsert_object(triple.subject.as_iri()?)?;
+        let predicate_id = self.upsert_predicate(triple.predicate.as_str())?;
+        match triple.object {
+            oxrdf::Term::NamedNode(object) => {
+                let object_id = self.upsert_object(object.as_str())?;
+                self.create_relation_triple(Relation::new(subject_id, predicate_id, object_id))?;
+            }
+            oxrdf::Term::Literal(literal) => {
+                self.create_property_triple(Property::new(
+                    subject_id,
+                    predicate_id,
+                    literal.value().to_string(),
+                    Some(literal.datatype().to_string()),
+                ))?;
+            }
+            _ => {
+                return Err(StoreError::sparql_error(
+                    "Blank Node and Triples in Triples are not supported yet",
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn batch_upsert_triples(&mut self, triples: &[Triple]) -> Result<(), StoreError> {
         let mut predicates: HashSet<NewPredicate> = HashSet::new();
         let mut objects: HashSet<NewObject> = HashSet::new();
         for triple in triples {
             objects.insert(triple.subject.as_iri()?.into());
             predicates.insert(triple.predicate.as_str().into());
             if let oxrdf::Term::NamedNode(val) = &triple.object {
-                objects.insert(val.as_str().to_string().as_str().into());
+                objects.insert(val.as_str()./*to_string().as_str().*/into());
             }
         }
         log::info!("Found {} unique objects", objects.len());
@@ -119,7 +150,10 @@ impl TripleStore {
     }
 
     /// takes a triple query and queries the relevant table depending on the type of the triple
-    pub(crate) fn query_triple_store(&mut self, triple: TripleQuery) -> Result<Vec<Solution>, StoreError> {
+    pub(crate) fn query_triple_store(
+        &mut self,
+        triple: TripleQuery,
+    ) -> Result<Vec<Solution>, StoreError> {
         let mut conn = self.conn()?;
         match triple {
             TripleQuery::PropertyTripleQuery {
