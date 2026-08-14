@@ -51,4 +51,20 @@ impl TripleStore {
     pub fn describe_object_by_id(&mut self, id: i64) -> Result<Vec<Triple>, StoreError> {
         self.describe_object_id(id)
     }
+
+    /// Describe a predicate (aka return all relations and properties containing said predicate)
+    /// Returns a list of all triples with this id as the predicate (analog function to describe_object_by_id)
+    pub fn describe_predicate_by_id(&mut self, id: i64) -> Result<Vec<Triple>, StoreError> {
+        self.describe_predicate_id(id)
+    }
+
+    /// get a list of subjects with a certain object and predicate for relations
+    /// the name might need to change, but this implements a pattern that is for example useful for a content repository (get all elements of a certain type)
+    pub fn get_relation_subject_list(
+        &mut self,
+        predicate: i64,
+        object: i64,
+    ) -> Result<Vec<(String, i64)>, StoreError> {
+        self.get_list_of_relation_subjects(predicate, object)
+    }
 }
