@@ -24,7 +24,8 @@ impl TripleStore {
         diesel::insert_into(prefixes)
             .values(prefix_new)
             .on_conflict(namespace)
-            .do_update().set(prefix.eq(excluded(prefix)))
+            .do_update()
+            .set(prefix.eq(excluded(prefix)))
             .execute(&mut conn)?;
         Ok(())
     }

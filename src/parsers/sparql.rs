@@ -13,7 +13,7 @@ use crate::query::triples::{query_property_triples, query_relation_triples};
 use crate::store::TripleStore;
 
 impl TripleStore {
-    pub fn parse_sparql_query(&mut self, sparql: &str) -> Result<QueryResult, StoreError> {
+    pub(crate) fn parse_sparql_query(&mut self, sparql: &str) -> Result<QueryResult, StoreError> {
         let parser = SparqlParser::new();
         let prefix_injected_query = self.inject_prefixes(sparql)?;
         let query = parser.parse_query(&prefix_injected_query)?;

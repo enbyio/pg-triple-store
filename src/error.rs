@@ -28,6 +28,7 @@ pub enum DatabaseError {
 impl StoreError {
     #[track_caller]
     pub fn db_error(kind: DatabaseError, msg: impl Display) -> Self {
+        log::error!("DB_ERROR({:?}): {msg}", kind);
         Self {
             kind: StoreErrorKind::DatabaseError(kind),
             msg: msg.to_string(),
@@ -37,6 +38,7 @@ impl StoreError {
 
     #[track_caller]
     pub fn sparql_error(msg: impl Display) -> Self {
+        log::error!("SPARQL_ERROR: {msg}");
         Self {
             kind: StoreErrorKind::SparqlError,
             msg: msg.to_string(),
@@ -46,6 +48,7 @@ impl StoreError {
 
     #[track_caller]
     pub fn data_error(msg: impl Display) -> Self {
+        log::error!("DATA_ERROR: {msg}");
         Self {
             kind: StoreErrorKind::DataError,
             msg: msg.to_string(),
@@ -55,6 +58,7 @@ impl StoreError {
 
     #[track_caller]
     pub fn io_error(msg: impl Display) -> Self {
+        log::error!("IO_ERROR: {msg}");
         Self {
             kind: StoreErrorKind::IOError,
             msg: msg.to_string(),
