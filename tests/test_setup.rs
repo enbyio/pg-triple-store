@@ -16,7 +16,7 @@ fn init_store() -> TripleStore {
 /// Execute a SELECT query and return the `SolutionSet`.
 /// Panics with a descriptive message if the query errors or returns a non-Select result.
 fn select(store: &mut TripleStore, sparql: &str) -> SolutionSet {
-    match store.parse_sparql_query(sparql).expect(sparql) {
+    match store.query(sparql).expect(sparql) {
         QueryResult::Solutions(s) => s,
         other => panic!("expected Solutions, got: {other}"),
     }
