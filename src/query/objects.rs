@@ -10,10 +10,7 @@ use crate::schema::objects::dsl::*;
 
 impl TripleStore {
     /// Checks if an object with a given iri exists and if not inserts it. ID of the object is returned regardless
-    pub(crate) fn upsert_object(
-        &mut self,
-        object: impl Into<NewObject>,
-    ) -> Result<i64, StoreError> {
+    pub(crate) fn upsert_object(&self, object: impl Into<NewObject>) -> Result<i64, StoreError> {
         let object_iri = object.into().iri;
         let mut conn = self.conn()?;
         if let Some(existing_id) = objects
@@ -32,7 +29,7 @@ impl TripleStore {
     }
 
     /// checks if an object exists and returns either said objects id or none, if the object doesn't exist
-    pub(crate) fn get_object_id(&mut self, object_iri: impl Into<String>) -> Option<i64> {
+    pub(crate) fn get_object_id(&self, object_iri: impl Into<String>) -> Option<i64> {
         let object_iri = object_iri.into();
         let mut conn = self
             .conn()
@@ -48,7 +45,7 @@ impl TripleStore {
     }
 
     pub(crate) fn batch_upsert_objects(
-        &mut self,
+        &self,
         object_iris: HashSet<NewObject>,
     ) -> Result<HashMap<String, i64>, StoreError> {
         let values: Vec<NewObject> = object_iris.into_iter().collect();

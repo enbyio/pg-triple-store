@@ -484,7 +484,7 @@ checksum = "7011d97b484a5ebdc4b1fdb3b12d5e4bbbea56e9d22b688f2e79e04b65a7d8a6"
 
 [[package]]
 name = "pg-triple-store"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "diesel",
  "diesel_migrations",

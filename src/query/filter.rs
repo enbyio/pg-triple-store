@@ -34,7 +34,7 @@ enum Value {
 
 impl TripleStore {
     pub(crate) fn add_filter(
-        &mut self,
+        &self,
         pattern: GraphPattern,
         expr: Expression,
     ) -> Result<QueryResult, StoreError> {

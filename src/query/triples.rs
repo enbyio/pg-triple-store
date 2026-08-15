@@ -13,7 +13,7 @@ use crate::query::solution::{Solution, SolutionBuilder};
 use crate::store::{PgPooledConnection, TripleStore};
 
 impl TripleStore {
-    pub(crate) fn create_property_triple(&mut self, property: Property) -> Result<(), StoreError> {
+    pub(crate) fn create_property_triple(&self, property: Property) -> Result<(), StoreError> {
         use crate::schema::properties::dsl::*;
         let mut conn = self.conn()?;
         let affected_rows = diesel::insert_into(properties)
@@ -29,7 +29,7 @@ impl TripleStore {
     }
 
     pub(crate) fn batch_create_property_triples(
-        &mut self,
+        &self,
         props: &[Property],
     ) -> Result<(), StoreError> {
         use crate::schema::properties::dsl::*;
@@ -46,7 +46,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub(crate) fn create_relation_triple(&mut self, relation: Relation) -> Result<(), StoreError> {
+    pub(crate) fn create_relation_triple(&self, relation: Relation) -> Result<(), StoreError> {
         use crate::schema::relations::dsl::*;
         let mut conn = self.conn()?;
         let affected_rows = diesel::insert_into(relations)
@@ -62,7 +62,7 @@ impl TripleStore {
     }
 
     pub(crate) fn batch_create_relation_triples(
-        &mut self,
+        &self,
         rels: &[Relation],
     ) -> Result<(), StoreError> {
         use crate::schema::relations::dsl::*;
@@ -79,7 +79,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub(crate) fn upsert_triple(&mut self, triple: Triple) -> Result<(), StoreError> {
+    pub(crate) fn upsert_triple(&self, triple: Triple) -> Result<(), StoreError> {
         let subject_id = self.upsert_object(triple.subject.as_iri()?)?;
         let predicate_id = self.upsert_predicate(triple.predicate.as_str())?;
         match triple.object {
@@ -104,7 +104,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub(crate) fn batch_upsert_triples(&mut self, triples: &[Triple]) -> Result<(), StoreError> {
+    pub(crate) fn batch_upsert_triples(&self, triples: &[Triple]) -> Result<(), StoreError> {
         let mut predicates: HashSet<NewPredicate> = HashSet::new();
         let mut objects: HashSet<NewObject> = HashSet::new();
         for triple in triples {

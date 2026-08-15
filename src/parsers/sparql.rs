@@ -13,7 +13,7 @@ use crate::query::triples::{query_property_triples, query_relation_triples};
 use crate::store::TripleStore;
 
 impl TripleStore {
-    pub(crate) fn parse_sparql_query(&mut self, sparql: &str) -> Result<QueryResult, StoreError> {
+    pub(crate) fn parse_sparql_query(&self, sparql: &str) -> Result<QueryResult, StoreError> {
         let parser = SparqlParser::new();
         let prefix_injected_query = self.inject_prefixes(sparql)?;
         let query = parser.parse_query(&prefix_injected_query)?;
@@ -44,10 +44,7 @@ impl TripleStore {
         Ok(format!("{}{}", prefix_block, query))
     }
 
-    pub(crate) fn execute_pattern(
-        &mut self,
-        pattern: GraphPattern,
-    ) -> Result<QueryResult, StoreError> {
+    pub(crate) fn execute_pattern(&self, pattern: GraphPattern) -> Result<QueryResult, StoreError> {
         log::debug!("GraphPattern: {}", pattern);
         match pattern {
             GraphPattern::Bgp { patterns } => {
@@ -70,7 +67,7 @@ impl TripleStore {
     }
 
     pub(crate) fn execute_triple_pattern_with_bindings(
-        &mut self,
+        &self,
         tp: TriplePattern,
         known: &BTreeMap<String, Vec<Term>>, // var name → allowed values (IN list)
     ) -> Result<Vec<Solution>, StoreError> {
@@ -158,7 +155,7 @@ impl TripleStore {
     }
 
     pub(crate) fn execute_triple_pattern(
-        &mut self,
+        &self,
         tp: TriplePattern,
     ) -> Result<Vec<Solution>, StoreError> {
         let mut conn = self.conn()?;
@@ -230,7 +227,7 @@ impl TripleStore {
         // }
     }
 
-    fn execute_bgp(&mut self, patterns: Vec<TriplePattern>) -> Result<SolutionSet, StoreError> {
+    fn execute_bgp(&self, patterns: Vec<TriplePattern>) -> Result<SolutionSet, StoreError> {
         if patterns.is_empty() {
             return Ok(SolutionSet {
                 vars: vec![],
@@ -338,7 +335,7 @@ impl TripleStore {
     }
 
     fn project_pattern(
-        &mut self,
+        &self,
         pattern: GraphPattern,
         variables: Vec<Variable>,
     ) -> Result<QueryResult, StoreError> {

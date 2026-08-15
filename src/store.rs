@@ -34,7 +34,7 @@ impl TripleStore {
             .min_idle(Some(1))
             .build(manager)
             .map_err(|e| StoreError::db_error(DatabaseError::ConnectionError, e))?;
-        let mut db = Self { pool };
+        let db = Self { pool };
         db.migrate()?;
         Ok(db)
     }
@@ -55,14 +55,14 @@ impl TripleStore {
 
     /// Manually run database migrations.
     /// This is non-destructive and only ensures all migrations are correctly run.
-    pub fn migrate(&mut self) -> Result<(), StoreError> {
+    pub fn migrate(&self) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         conn.run_pending_migrations(MIGRATIONS)
             .map_err(|e| StoreError::db_error(DatabaseError::MigrationError, e))?;
         Ok(())
     }
 
-    fn revert_migrations(&mut self) -> Result<(), StoreError> {
+    fn revert_migrations(&self) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         conn.revert_all_migrations(MIGRATIONS)
             .map_err(|e| StoreError::db_error(DatabaseError::MigrationError, e))?;
@@ -70,7 +70,7 @@ impl TripleStore {
     }
     /// **Warning**: this will wipe the data in your db*
     /// Revert migrations to delete existing tables and then apply migrations again.
-    pub fn reset_db(&mut self) -> Result<(), StoreError> {
+    pub fn reset_db(&self) -> Result<(), StoreError> {
         self.revert_migrations()?;
         self.migrate()
     }

@@ -10,7 +10,7 @@ use crate::schema::predicates::dsl::*;
 impl TripleStore {
     /// Checks if a predicate with a given iri exists and if not inserts it. ID of the predicate is returned either way
     pub(crate) fn upsert_predicate(
-        &mut self,
+        &self,
         predicate_iri: impl Into<NewPredicate>,
     ) -> Result<i64, StoreError> {
         let mut conn = self.conn()?;
@@ -31,7 +31,7 @@ impl TripleStore {
     }
 
     /// checks if a predicate exists and returns either said objects id or none, if the object doesn't exist
-    pub(crate) fn get_predicate_id(&mut self, predicate_iri: impl Into<String>) -> Option<i64> {
+    pub(crate) fn get_predicate_id(&self, predicate_iri: impl Into<String>) -> Option<i64> {
         let predicate_iri = predicate_iri.into();
         let mut conn = self
             .conn()
@@ -47,7 +47,7 @@ impl TripleStore {
     }
 
     pub(crate) fn batch_upsert_predicates(
-        &mut self,
+        &self,
         object_iris: HashSet<NewPredicate>,
     ) -> Result<HashMap<String, i64>, StoreError> {
         let mut conn = self.conn()?;
