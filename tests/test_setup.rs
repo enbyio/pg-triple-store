@@ -5,7 +5,7 @@ fn init_store() -> TripleStore {
     let _ = env_logger::Builder::from_default_env()
         .filter(None, log::LevelFilter::Debug)
         .try_init();
-    let mut store = TripleStore::new_from_env().expect("DB connection failed");
+    let store = TripleStore::new_from_env().expect("DB connection failed");
     store.reset_db().expect("reset failed");
     store
         .import_turtle_file("tests/test.ttl")
@@ -15,7 +15,7 @@ fn init_store() -> TripleStore {
 
 /// Execute a SELECT query and return the `SolutionSet`.
 /// Panics with a descriptive message if the query errors or returns a non-Select result.
-fn select(store: &mut TripleStore, sparql: &str) -> SolutionSet {
+fn select(store: &TripleStore, sparql: &str) -> SolutionSet {
     match store.query(sparql).expect(sparql) {
         QueryResult::Solutions(s) => s,
         other => panic!("expected Solutions, got: {other}"),
@@ -61,9 +61,9 @@ fn assert_empty(sol: &SolutionSet) {
 
 #[test]
 fn test_cross_product_no_shared_vars() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         "SELECT ?person ?org WHERE {
            ?person ex:knows ex:bob .
            ?org ex:partOf ex:consortium .
@@ -75,9 +75,9 @@ fn test_cross_product_no_shared_vars() {
 
 #[test]
 fn test_shared_var_intersection() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         "SELECT ?person WHERE {
            ?person ex:knows ex:carol .
            ex:alice ex:knows ?person .
@@ -90,9 +90,9 @@ fn test_shared_var_intersection() {
 
 #[test]
 fn test_three_hop_chain() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         "SELECT ?hop1 ?hop2 ?org WHERE {
            ex:alice ex:knows ?hop1 .
            ?hop1 ex:knows ?hop2 .
@@ -109,9 +109,9 @@ fn test_three_hop_chain() {
 
 #[test]
 fn test_filter_equality_string() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(?name = "Alice")
@@ -122,9 +122,9 @@ fn test_filter_equality_string() {
 
 #[test]
 fn test_filter_equality_or() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(?name = "Alice" || ?name = "Dave")
@@ -139,9 +139,9 @@ fn test_filter_equality_or() {
 
 #[test]
 fn test_filter_inequality() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(?name != "Alice")
@@ -158,9 +158,9 @@ fn test_filter_inequality() {
 
 #[test]
 fn test_filter_equality_no_match() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(?name = "Zaphod")
@@ -174,10 +174,10 @@ fn test_filter_equality_no_match() {
 
 #[test]
 fn test_filter_numeric_gt() {
-    let mut store = init_store();
+    let store = init_store();
     // age > 25: only alice (30)
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:age ?age .
              FILTER(?age > "25"^^xsd:integer)
@@ -189,10 +189,10 @@ fn test_filter_numeric_gt() {
 
 #[test]
 fn test_filter_numeric_gte() {
-    let mut store = init_store();
+    let store = init_store();
     // age >= 25: alice (30), bob (25), carol (25)
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:age ?age .
              FILTER(?age >= "25"^^xsd:integer)
@@ -204,10 +204,10 @@ fn test_filter_numeric_gte() {
 
 #[test]
 fn test_filter_numeric_lt() {
-    let mut store = init_store();
+    let store = init_store();
     // age < 30: bob and carol (both 25)
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:age ?age .
              FILTER(?age < "30"^^xsd:integer)
@@ -223,9 +223,9 @@ fn test_filter_numeric_lt() {
 
 #[test]
 fn test_filter_numeric_eq_integer() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:age ?age .
              FILTER(?age = "25"^^xsd:integer)
@@ -238,9 +238,9 @@ fn test_filter_numeric_eq_integer() {
 
 #[test]
 fn test_filter_not() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(!(?name = "Alice"))
@@ -255,10 +255,10 @@ fn test_filter_not() {
 
 #[test]
 fn test_filter_and() {
-    let mut store = init_store();
+    let store = init_store();
     // age = 25 AND knows dave
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:age ?age .
              ?p ex:knows ex:dave .
@@ -271,10 +271,10 @@ fn test_filter_and() {
 
 #[test]
 fn test_filter_compound_and_or() {
-    let mut store = init_store();
+    let store = init_store();
     // (name = "Alice" || name = "Bob") && age >= 25
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              ?p ex:age ?age .
@@ -294,10 +294,10 @@ fn test_filter_compound_and_or() {
 
 #[test]
 fn test_filter_bound_age_exists() {
-    let mut store = init_store();
+    let store = init_store();
     // Everyone who has an age — dave must NOT appear
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:age ?age .
              FILTER(BOUND(?age))
@@ -316,9 +316,9 @@ fn test_filter_bound_age_exists() {
 
 #[test]
 fn test_filter_in_list() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(?name IN ("Alice", "Carol"))
@@ -330,9 +330,9 @@ fn test_filter_in_list() {
 
 #[test]
 fn test_filter_not_in_list() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(?name NOT IN ("Alice", "Carol"))
@@ -346,9 +346,9 @@ fn test_filter_not_in_list() {
 
 #[test]
 fn test_filter_contains() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(CONTAINS(?name, "li"))
@@ -360,9 +360,9 @@ fn test_filter_contains() {
 
 #[test]
 fn test_filter_strstarts() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(STRSTARTS(?name, "A"))
@@ -373,9 +373,9 @@ fn test_filter_strstarts() {
 
 #[test]
 fn test_filter_strends() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(STRENDS(?name, "b"))
@@ -387,9 +387,9 @@ fn test_filter_strends() {
 
 #[test]
 fn test_filter_strlen_gt() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(STRLEN(?name) > "4"^^xsd:integer)
@@ -402,9 +402,9 @@ fn test_filter_strlen_gt() {
 
 #[test]
 fn test_filter_lcase() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(LCASE(?name) = "alice")
@@ -415,9 +415,9 @@ fn test_filter_lcase() {
 
 #[test]
 fn test_filter_ucase() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(UCASE(?name) = "BOB")
@@ -431,9 +431,9 @@ fn test_filter_ucase() {
 
 #[test]
 fn test_filter_regex_basic() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(REGEX(?name, "^[AB]"))
@@ -446,9 +446,9 @@ fn test_filter_regex_basic() {
 
 #[test]
 fn test_filter_regex_case_insensitive() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(REGEX(?name, "alice", "i"))
@@ -459,9 +459,9 @@ fn test_filter_regex_case_insensitive() {
 
 #[test]
 fn test_filter_regex_no_match() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(REGEX(?name, "^Z"))
@@ -475,9 +475,9 @@ fn test_filter_regex_no_match() {
 
 #[test]
 fn test_filter_on_iri_variable() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?name WHERE {
              ?p ex:name ?name .
              FILTER(?p = ex:alice)
@@ -488,10 +488,10 @@ fn test_filter_on_iri_variable() {
 
 #[test]
 fn test_filter_isiri() {
-    let mut store = init_store();
+    let store = init_store();
     // All objects of ex:knows are IRIs (not literals)
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?friend WHERE {
              ex:alice ex:knows ?friend .
              FILTER(isIRI(?friend))
@@ -502,9 +502,9 @@ fn test_filter_isiri() {
 
 #[test]
 fn test_filter_isliteral() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?val WHERE {
              ex:alice ?p ?val .
              FILTER(isLiteral(?val))
@@ -518,9 +518,9 @@ fn test_filter_isliteral() {
 
 #[test]
 fn test_filter_after_join() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?person ?friend WHERE {
              ?person ex:knows ?friend .
              ?friend ex:age ?age .
@@ -536,9 +536,9 @@ fn test_filter_after_join() {
 
 #[test]
 fn test_filter_age_range_with_name() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p ?name WHERE {
              ?p ex:name ?name .
              ?p ex:age ?age .
@@ -552,9 +552,9 @@ fn test_filter_age_range_with_name() {
 
 #[test]
 fn test_filter_org_member_young() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p ?org WHERE {
              ?p ex:worksAt ?org .
              ?p ex:age ?age .
@@ -569,12 +569,12 @@ fn test_filter_org_member_young() {
 
 #[test]
 fn test_filter_arithmetic() {
-    let mut store = init_store();
+    let store = init_store();
     // score + 1.0 > 9.0: alice (9.5+1=10.5), carol (8.0+1=9.0 — NOT > 9.0)
     // so only alice's score satisfies score > 8.0, i.e. score + 0 > 8.0
     // Let's use: score * 2 > 17 → only alice (9.5*2=19 > 17)
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:score ?s .
              FILTER(?s * "2"^^xsd:decimal > "17"^^xsd:decimal)
@@ -587,10 +587,10 @@ fn test_filter_arithmetic() {
 
 #[test]
 fn test_filter_if_expression() {
-    let mut store = init_store();
+    let store = init_store();
     // IF(?name = "Alice", true, false) → keep only alice
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(IF(?name = "Alice", true, false))
@@ -603,11 +603,11 @@ fn test_filter_if_expression() {
 
 #[test]
 fn test_filter_coalesce_fallback() {
-    let mut store = init_store();
+    let store = init_store();
     // COALESCE(?missing, "Alice") = "Alice" → all rows where ?name = result
     // Here every row has a name, so we compare ?name to COALESCE of a constant
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(COALESCE(?name, "Fallback") = "Alice")
@@ -620,11 +620,11 @@ fn test_filter_coalesce_fallback() {
 
 #[test]
 fn test_filter_complex_social_graph() {
-    let mut store = init_store();
+    let store = init_store();
     // "Find all pairs (person, colleague) who work at the same org,
     //  where person's name starts with 'A' and colleague's age <= 25"
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?person ?colleague WHERE {
              ?person    ex:worksAt ?org .
              ?colleague ex:worksAt ?org .
@@ -643,11 +643,11 @@ fn test_filter_complex_social_graph() {
 
 #[test]
 fn test_filter_on_empty_bgp_result() {
-    let mut store = init_store();
+    let store = init_store();
     // The BGP itself returns nothing (no one knows ex:nobody),
     // so the filter should also return nothing.
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:knows ex:nobody .
              FILTER(?p = ex:alice)
@@ -658,9 +658,9 @@ fn test_filter_on_empty_bgp_result() {
 
 #[test]
 fn test_filter_always_false() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(false)
@@ -671,9 +671,9 @@ fn test_filter_always_false() {
 
 #[test]
 fn test_filter_always_true() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(true)
@@ -685,10 +685,10 @@ fn test_filter_always_true() {
 
 #[test]
 fn test_filter_same_term() {
-    let mut store = init_store();
+    let store = init_store();
     // sameTerm is stricter than = but for plain string literals they agree
     let sol = select(
-        &mut store,
+        &store,
         r#"SELECT ?p WHERE {
              ?p ex:name ?name .
              FILTER(sameTerm(?name, "Alice"))
@@ -701,9 +701,9 @@ fn test_filter_same_term() {
 
 #[test]
 fn test_no_filter_returns_all_names() {
-    let mut store = init_store();
+    let store = init_store();
     let sol = select(
-        &mut store,
+        &store,
         "SELECT ?p ?name WHERE {
            ?p ex:name ?name .
          }",
