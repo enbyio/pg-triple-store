@@ -8,7 +8,7 @@ use crate::store::TripleStore;
 
 impl TripleStore {
     /// returns all triples
-    pub(crate) fn describe_object_id(&mut self, object_id: i64) -> Result<Vec<Triple>, StoreError> {
+    pub(crate) fn describe_object_id(&self, object_id: i64) -> Result<Vec<Triple>, StoreError> {
         use crate::schema::objects;
         use crate::schema::predicates;
         use crate::schema::properties;
@@ -71,7 +71,7 @@ impl TripleStore {
     }
 
     pub(crate) fn describe_predicate_id(
-        &mut self,
+        &self,
         predicate_id: i64,
     ) -> Result<Vec<Triple>, StoreError> {
         use crate::schema::objects;
@@ -131,7 +131,7 @@ impl TripleStore {
     }
 
     pub(crate) fn get_list_of_relation_subjects(
-        &mut self,
+        &self,
         predicate: i64,
         object: i64,
     ) -> Result<Vec<(String, i64)>, StoreError> {

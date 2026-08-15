@@ -7,7 +7,7 @@ use crate::store::TripleStore;
 
 impl TripleStore {
     /// Import turtle data into the triple store.
-    pub fn import_turtle_data(&mut self, data: String) -> Result<(), StoreError> {
+    pub fn import_turtle_data(&self, data: String) -> Result<(), StoreError> {
         let mut parser = TurtleParser::new().for_reader(data.as_bytes());
         let mut triples: Vec<Triple> = Vec::new();
         for triple in parser.by_ref() {
@@ -26,7 +26,7 @@ impl TripleStore {
     }
 
     /// Import a turtle data file into the triple store (just resolves to import_turtle_data).
-    pub fn import_turtle_file(&mut self, path: &str) -> Result<(), StoreError> {
+    pub fn import_turtle_file(&self, path: &str) -> Result<(), StoreError> {
         let data = std::fs::read_to_string(path)?;
         self.import_turtle_data(data)
     }

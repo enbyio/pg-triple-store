@@ -7,7 +7,7 @@ use crate::schema::prefixes::dsl::*;
 use crate::store::TripleStore;
 
 impl TripleStore {
-    pub(crate) fn import_prefixes(&mut self, prefix_list: Vec<Prefix>) -> Result<(), StoreError> {
+    pub(crate) fn import_prefixes(&self, prefix_list: Vec<Prefix>) -> Result<(), StoreError> {
         let mut conn = self.conn()?;
         diesel::insert_into(prefixes)
             .values(prefix_list)
@@ -18,7 +18,7 @@ impl TripleStore {
         Ok(())
     }
 
-    pub(crate) fn upsert_prefix(&mut self, pfx: String, nsp: String) -> Result<(), StoreError> {
+    pub(crate) fn upsert_prefix(&self, pfx: String, nsp: String) -> Result<(), StoreError> {
         let prefix_new = Prefix::new(nsp, pfx);
         let mut conn = self.conn()?;
         diesel::insert_into(prefixes)
@@ -43,14 +43,14 @@ impl TripleStore {
         Ok(format!("{}{}", long_prefix, short_prefix.1))
     }
 
-    pub(crate) fn get_all_prefixes(&mut self) -> Result<Vec<(String, String)>, StoreError> {
+    pub(crate) fn get_all_prefixes(&self) -> Result<Vec<(String, String)>, StoreError> {
         let mut conn = self.conn()?;
         Ok(prefixes
             .select((namespace, prefix))
             .load::<(String, String)>(&mut conn)?)
     }
 
-    pub(crate) fn shorten_iri(&mut self, iri: String) -> Result<String, StoreError> {
+    pub(crate) fn shorten_iri(&self, iri: String) -> Result<String, StoreError> {
         let mut best: Option<(String, String)> = None;
         let mut longest_fit: usize = 0;
         for (ns, pfx) in self.get_all_prefixes()? {
