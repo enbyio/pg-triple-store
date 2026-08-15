@@ -1,4 +1,3 @@
-use env_logger::init;
 use oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
 use pg_triple_store::query::solution::{QueryResult, SolutionSet};
 use pg_triple_store::store::TripleStore;
