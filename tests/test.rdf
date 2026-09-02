@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xmlns:ex="http://example.org/">
+
+  <!-- ── People ──────────────────────────────────────────────────────── -->
+
+  <rdf:Description rdf:about="http://example.org/alice">
+    <ex:knows rdf:resource="http://example.org/bob"/>
+    <ex:knows rdf:resource="http://example.org/carol"/>
+    <ex:name>Alice</ex:name>
+    <ex:age rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">30</ex:age>
+    <ex:score rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">9.5</ex:score>
+    <ex:worksAt rdf:resource="http://example.org/orgA"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/bob">
+    <ex:knows rdf:resource="http://example.org/carol"/>
+    <ex:knows rdf:resource="http://example.org/dave"/>
+    <ex:name>Bob</ex:name>
+    <ex:age rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">25</ex:age>
+    <ex:score rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">7.0</ex:score>
+    <ex:worksAt rdf:resource="http://example.org/orgA"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/carol">
+    <ex:knows rdf:resource="http://example.org/dave"/>
+    <ex:name>Carol</ex:name>
+    <ex:age rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">25</ex:age>
+    <ex:score rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">8.0</ex:score>
+    <ex:worksAt rdf:resource="http://example.org/orgB"/>
+  </rdf:Description>
+
+  <!-- Dave intentionally has no age or score so BOUND() tests work. -->
+  <rdf:Description rdf:about="http://example.org/dave">
+    <ex:name>Dave</ex:name>
+  </rdf:Description>
+
+  <!-- ── Organisations ───────────────────────────────────────────────── -->
+
+  <rdf:Description rdf:about="http://example.org/orgA">
+    <ex:partOf rdf:resource="http://example.org/consortium"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/orgB">
+    <ex:partOf rdf:resource="http://example.org/consortium"/>
+  </rdf:Description>
+
+</rdf:RDF>

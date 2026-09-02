@@ -60,6 +60,26 @@ fn assert_empty(sol: &SolutionSet) {
     assert_count(sol, 0);
 }
 
+// #[test]
+// fn test_import_turtle_file() {
+//     let _ = env_logger::Builder::from_default_env()
+//         .filter(None, log::LevelFilter::Debug)
+//         .try_init();
+//     let store = TripleStore::new_from_env().expect("DB connection failed");
+//     store.reset_db().expect("reset failed");
+//     store.import_turtle_file("tests/test.ttl").unwrap()
+// }
+
+#[test]
+fn test_import_rdf_file() {
+    let _ = env_logger::Builder::from_default_env()
+        .filter(None, log::LevelFilter::Debug)
+        .try_init();
+    let store = TripleStore::new_from_env().expect("DB connection failed");
+    store.reset_db().expect("reset failed");
+    store.import_rdfxml_file("tests/test.rdf").unwrap()
+}
+
 #[test]
 fn test_cross_product_no_shared_vars() {
     let store = init_store();
