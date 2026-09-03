@@ -11,10 +11,10 @@ use crate::schema::objects::dsl::*;
 impl TripleStore {
     /// Checks if an object with a given iri exists and if not inserts it. ID of the object is returned regardless
     pub(crate) fn upsert_object(&self, object: impl Into<NewObject>) -> Result<i64, StoreError> {
-        let object_iri = object.into().iri;
+        let object_iri = object.into().value;
         let mut conn = self.conn()?;
         if let Some(existing_id) = objects
-            .filter(iri.eq(&object_iri))
+            .filter(value.eq(&object_iri))
             .select(id)
             .first::<i64>(&mut conn)
             .optional()?
@@ -22,7 +22,7 @@ impl TripleStore {
             return Ok(existing_id);
         }
         Ok(diesel::insert_into(objects)
-            .values(iri.eq(&object_iri))
+            .values(value.eq(&object_iri))
             .on_conflict_do_nothing()
             .get_result::<Object>(&mut conn)?
             .id)
@@ -36,7 +36,7 @@ impl TripleStore {
             .inspect_err(|e| log::error!("Failed to establish connection: {:?}", e))
             .ok()?;
         objects
-            .filter(iri.eq(object_iri))
+            .filter(value.eq(object_iri))
             .select(id)
             .first::<i64>(&mut conn)
             .optional()
@@ -52,10 +52,10 @@ impl TripleStore {
         let mut conn = self.conn()?;
         Ok(diesel::insert_into(objects)
             .values(&values)
-            .on_conflict(iri)
+            .on_conflict(value)
             .do_update()
-            .set(iri.eq(iri))
-            .returning((iri, id))
+            .set(value.eq(value))
+            .returning((value, id))
             .get_results::<(String, i64)>(&mut conn)?
             .into_iter()
             .collect())

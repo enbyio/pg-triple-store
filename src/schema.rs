@@ -3,7 +3,8 @@
 diesel::table! {
     objects (id) {
         id -> Int8,
-        iri -> Text,
+        kind -> Text,
+        value -> Text,
     }
 }
 

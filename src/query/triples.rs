@@ -170,14 +170,14 @@ pub(crate) fn query_relation_triples(
         .inner_join(predicates::table.on(relations::predicate.eq(predicates::id)))
         .inner_join(object_objects.on(relations::object.eq(object_objects.field(objects::id))))
         .select((
-            subject_objects.field(objects::iri),
+            subject_objects.field(objects::value),
             predicates::iri,
-            object_objects.fields(objects::iri),
+            object_objects.fields(objects::value),
         ))
         .into_boxed();
     match subject {
         TriplePosition::Constant(val) => {
-            relation_query = relation_query.filter(subject_objects.field(objects::iri).eq(val));
+            relation_query = relation_query.filter(subject_objects.field(objects::value).eq(val));
         }
         TriplePosition::Variable(var) => builder.subject(var),
         TriplePosition::Bound(var, terms) => {
@@ -189,7 +189,7 @@ pub(crate) fn query_relation_triples(
                 })
                 .collect();
             builder.subject(var);
-            relation_query = relation_query.filter(subject_objects.field(objects::iri).eq_any(iris))
+            relation_query = relation_query.filter(subject_objects.field(objects::value).eq_any(iris))
         }
     }
     match predicate {
@@ -211,7 +211,7 @@ pub(crate) fn query_relation_triples(
     }
     match object {
         TriplePosition::Constant(val) => {
-            relation_query = relation_query.filter(object_objects.field(objects::iri).eq(val))
+            relation_query = relation_query.filter(object_objects.field(objects::value).eq(val))
         }
         TriplePosition::Variable(var) => {
             builder.object(var);
@@ -225,7 +225,7 @@ pub(crate) fn query_relation_triples(
                 })
                 .collect();
             builder.object(var);
-            relation_query = relation_query.filter(object_objects.field(objects::iri).eq_any(iris))
+            relation_query = relation_query.filter(object_objects.field(objects::value).eq_any(iris))
         }
     }
 
@@ -249,7 +249,7 @@ pub(crate) fn query_property_triples(
         .inner_join(objects::table.on(properties::subject.eq(objects::id)))
         .inner_join(predicates::table.on(properties::predicate.eq(predicates::id)))
         .select((
-            objects::iri,
+            objects::value,
             predicates::iri,
             properties::literal_value,
             properties::literal_type,
@@ -257,7 +257,7 @@ pub(crate) fn query_property_triples(
         .into_boxed();
     match subject {
         TriplePosition::Constant(val) => {
-            property_query = property_query.filter(objects::iri.eq(val))
+            property_query = property_query.filter(objects::value.eq(val))
         }
         TriplePosition::Variable(var) => builder.subject(var),
         TriplePosition::Bound(var, terms) => {
@@ -269,7 +269,7 @@ pub(crate) fn query_property_triples(
                 })
                 .collect();
             builder.subject(var);
-            property_query = property_query.filter(objects::iri.eq_any(iris));
+            property_query = property_query.filter(objects::value.eq_any(iris));
         }
     }
     match predicate {
@@ -310,7 +310,7 @@ pub(crate) fn query_property_triples(
                 })
                 .collect();
             builder.subject(var);
-            property_query = property_query.filter(objects::iri.eq_any(iris))
+            property_query = property_query.filter(objects::value.eq_any(iris))
         }
     }
     Ok(builder.get_prop_solutions_typed(

@@ -1,4 +1,6 @@
 CREATE TABLE objects (
   id    BIGSERIAL PRIMARY KEY,
-  iri   TEXT UNIQUE NOT NULL
+  kind  TEXT NOT NULL CHECK (kind IN ('iri', 'blank')),
+  value TEXT NOT NULL,
+  UNIQUE (kind, value)
 );

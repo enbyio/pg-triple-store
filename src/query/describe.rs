@@ -17,13 +17,13 @@ impl TripleStore {
         let mut results: Vec<Triple> = Vec::new();
         // Relations with the object in the subject
         let object_iri: String = objects::table
-            .select(objects::iri)
+            .select(objects::value)
             .filter(objects::id.eq(object_id))
             .first(&mut conn)?;
         let rels_subject = relations::table
             .inner_join(predicates::table.on(relations::predicate.eq(predicates::id)))
             .inner_join(objects::table.on(relations::object.eq(objects::id)))
-            .select((predicates::iri, objects::iri))
+            .select((predicates::iri, objects::value))
             .filter(relations::subject.eq(object_id))
             .load::<(String, String)>(&mut conn)?;
         let subject = NamedOrBlankNode::NamedNode(NamedNode::new(object_iri.clone())?);
@@ -38,7 +38,7 @@ impl TripleStore {
         let rels_object = relations::table
             .inner_join(objects::table.on(relations::subject.eq(objects::id)))
             .inner_join(predicates::table.on(relations::predicate.eq(predicates::id)))
-            .select((objects::iri, predicates::iri))
+            .select((objects::value, predicates::iri))
             .filter(relations::object.eq(object_id))
             .load::<(String, String)>(&mut conn)?;
         let object = Term::NamedNode(NamedNode::new(object_iri)?);
@@ -93,8 +93,8 @@ impl TripleStore {
             )
             .inner_join(object_objects.on(relations::object.eq(object_objects.fields(objects::id))))
             .select((
-                subject_objects.field(objects::iri),
-                object_objects.fields(objects::iri),
+                subject_objects.field(objects::value),
+                object_objects.fields(objects::value),
             ))
             .filter(relations::predicate.eq(predicate_id))
             .load::<(String, String)>(&mut conn)?;
@@ -109,7 +109,7 @@ impl TripleStore {
         let props = properties::table
             .inner_join(objects::table.on(properties::subject.eq(objects::id)))
             .select((
-                objects::iri,
+                objects::value,
                 properties::literal_value,
                 properties::literal_type,
             ))
@@ -140,7 +140,7 @@ impl TripleStore {
         let mut conn = self.conn()?;
         Ok(relations::table
             .inner_join(objects::table.on(relations::subject.eq(objects::id)))
-            .select((objects::iri, relations::object))
+            .select((objects::value, relations::object))
             .filter(relations::predicate.eq(predicate))
             .filter(relations::object.eq(object))
             .load::<(String, i64)>(&mut conn)?)
