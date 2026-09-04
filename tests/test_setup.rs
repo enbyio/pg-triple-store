@@ -28,7 +28,7 @@ fn values(sol: &SolutionSet, var: &str) -> Vec<String> {
     let mut out: Vec<String> = sol
         .rows
         .iter()
-        .filter_map(|row| row.bindings.get(var))
+        .filter_map(|row| row.get(var))
         .map(|t| t.to_string())
         .collect();
     out.sort();
@@ -60,15 +60,15 @@ fn assert_empty(sol: &SolutionSet) {
     assert_count(sol, 0);
 }
 
-// #[test]
-// fn test_import_turtle_file() {
-//     let _ = env_logger::Builder::from_default_env()
-//         .filter(None, log::LevelFilter::Debug)
-//         .try_init();
-//     let store = TripleStore::new_from_env().expect("DB connection failed");
-//     store.reset_db().expect("reset failed");
-//     store.import_turtle_file("tests/test.ttl").unwrap()
-// }
+#[test]
+fn test_import_turtle_file() {
+    let _ = env_logger::Builder::from_default_env()
+        .filter(None, log::LevelFilter::Debug)
+        .try_init();
+    let store = TripleStore::new_from_env().expect("DB connection failed");
+    store.reset_db().expect("reset failed");
+    store.import_turtle_file("tests/test.ttl").unwrap()
+}
 
 #[test]
 fn test_import_rdf_file() {
@@ -328,7 +328,7 @@ fn test_filter_bound_age_exists() {
     let names: Vec<String> = sol
         .rows
         .iter()
-        .map(|r| r.bindings["p"].to_string())
+        .map(|r| r.get("p").unwrap().to_string())
         .collect();
     assert!(!names.iter().any(|n| n.contains("dave")));
 }

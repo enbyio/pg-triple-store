@@ -179,7 +179,10 @@ pub(crate) fn query_relation_triples(
         TriplePosition::Constant(val) => {
             relation_query = relation_query.filter(subject_objects.field(objects::value).eq(val));
         }
-        TriplePosition::Variable(var) => builder.subject(var),
+        TriplePosition::Variable(var) => {
+            log::info!("VAR is: {var:?}");
+            builder.subject(var)
+        },
         TriplePosition::Bound(var, terms) => {
             let iris: Vec<String> = terms
                 .iter()
@@ -196,7 +199,10 @@ pub(crate) fn query_relation_triples(
         TriplePosition::Constant(val) => {
             relation_query = relation_query.filter(predicates::iri.eq(val))
         }
-        TriplePosition::Variable(val) => builder.predicate(val),
+        TriplePosition::Variable(val) => {
+            log::info!("VAR is: {val:?}");
+            builder.predicate(val)
+        }
         TriplePosition::Bound(var, terms) => {
             let iris: Vec<String> = terms
                 .iter()
@@ -213,7 +219,8 @@ pub(crate) fn query_relation_triples(
         TriplePosition::Constant(val) => {
             relation_query = relation_query.filter(object_objects.field(objects::value).eq(val))
         }
-        TriplePosition::Variable(var) => {
+        TriplePosition::Variable(var, ..) => {
+            log::info!("VAR is: {var:?}");
             builder.object(var);
         }
         TriplePosition::Bound(var, terms) => {
@@ -259,7 +266,10 @@ pub(crate) fn query_property_triples(
         TriplePosition::Constant(val) => {
             property_query = property_query.filter(objects::value.eq(val))
         }
-        TriplePosition::Variable(var) => builder.subject(var),
+        TriplePosition::Variable(var) => {
+            log::info!("VAR is: {var:?}");
+            builder.subject(var)
+        },
         TriplePosition::Bound(var, terms) => {
             let iris: Vec<String> = terms
                 .iter()
@@ -276,7 +286,10 @@ pub(crate) fn query_property_triples(
         TriplePosition::Constant(val) => {
             property_query = property_query.filter(predicates::iri.eq(val))
         }
-        TriplePosition::Variable(val) => builder.predicate(val),
+        TriplePosition::Variable(val) => {
+            log::info!("VAR is: {val:?}");
+            builder.predicate(val)
+        }
         TriplePosition::Bound(var, terms) => {
             let iris: Vec<String> = terms
                 .iter()
@@ -299,6 +312,7 @@ pub(crate) fn query_property_triples(
             };
         }
         TriplePosition::Variable(var) => {
+            log::info!("VAR is: {var:?}");
             builder.object(var);
         }
         TriplePosition::Bound(var, terms) => {

@@ -12,11 +12,28 @@ pub enum LiteralMatchMode {
     Contains,
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, Debug, PartialOrd, Ord)]
+pub(crate) enum VarKey {
+    Named(String),
+    Blank(String),
+}
+
+impl VarKey {
+    pub(crate) fn is_named(&self) -> bool {
+        matches!(self, VarKey::Named(_))
+    }
+    pub(crate) fn into_name(self) -> String {
+        match self {
+            VarKey::Named(s) | VarKey::Blank(s) => s,
+        }
+    }
+}
+
 #[derive(Clone)]
-pub enum TriplePosition {
+pub(crate) enum TriplePosition {
     Constant(String),
-    Variable(String),
-    Bound(String, Vec<Term>),
+    Variable(VarKey),
+    Bound(VarKey, Vec<Term>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -50,7 +67,9 @@ impl AsIri for NamedOrBlankNode {
     fn as_iri(&self) -> Result<&str, StoreError> {
         match self {
             NamedOrBlankNode::NamedNode(named_node) => Ok(named_node.as_str()),
-            NamedOrBlankNode::BlankNode(_) => Err(StoreError::data_error("Unsupported Input Data")),
+            NamedOrBlankNode::BlankNode(_) => Err(StoreError::data_error(
+                "Blank Node is not supported as input data here",
+            )),
         }
     }
 }

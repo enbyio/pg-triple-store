@@ -7,7 +7,7 @@ use spargebra::term::{NamedNodePattern, TermPattern, TriplePattern};
 use spargebra::{Query, SparqlParser};
 
 use crate::error::StoreError;
-use crate::model::triple::{LiteralMatchMode, Term, TriplePosition};
+use crate::model::triple::{LiteralMatchMode, Term, TriplePosition, VarKey};
 use crate::query::solution::{QueryResult, Solution, SolutionSet};
 use crate::query::triples::{query_property_triples, query_relation_triples};
 use crate::store::TripleStore;
@@ -69,20 +69,28 @@ impl TripleStore {
     pub(crate) fn execute_triple_pattern_with_bindings(
         &self,
         tp: TriplePattern,
-        known: &BTreeMap<String, Vec<Term>>, // var name → allowed values (IN list)
+        known: &BTreeMap<VarKey, Vec<Term>>, // var name → allowed values (IN list)
     ) -> Result<Vec<Solution>, StoreError> {
         log::debug!("known variables: {:?}", known);
         log::debug!("Pattern: {:?}", tp);
         let subject = match tp.subject {
-            spargebra::term::TermPattern::NamedNode(named_node) => {
+            TermPattern::NamedNode(named_node) => {
                 TriplePosition::Constant(self.normalize_iri(named_node.as_str())?)
             }
-            spargebra::term::TermPattern::Variable(variable) => {
-                let name = variable.as_str().to_string();
+            TermPattern::Variable(variable) => {
+                let name = VarKey::Named(variable.as_str().to_string());
                 if let Some(values) = known.get(&name) {
                     TriplePosition::Bound(name, values.clone())
                 } else {
                     TriplePosition::Variable(name)
+                }
+            }
+            TermPattern::BlankNode(bnode) => {
+                let key = VarKey::Blank(bnode.as_str().to_string());
+                if let Some(values) = known.get(&key) {
+                    TriplePosition::Bound(key, values.clone())
+                } else {
+                    TriplePosition::Variable(key)
                 }
             }
             _ => {
@@ -92,28 +100,28 @@ impl TripleStore {
             }
         };
         let predicate = match tp.predicate {
-            spargebra::term::NamedNodePattern::NamedNode(named_node) => {
+            NamedNodePattern::NamedNode(named_node) => {
                 TriplePosition::Constant(self.normalize_iri(named_node.as_str())?)
             }
-            spargebra::term::NamedNodePattern::Variable(variable) => {
-                let name = variable.as_str().to_string();
-                if let Some(values) = known.get(&name) {
-                    TriplePosition::Bound(name, values.clone())
+            NamedNodePattern::Variable(variable) => {
+                let key = VarKey::Named(variable.as_str().to_string());
+                if let Some(values) = known.get(&key) {
+                    TriplePosition::Bound(key, values.clone())
                 } else {
-                    TriplePosition::Variable(name)
+                    TriplePosition::Variable(key)
                 }
             }
         };
         let mut results: Vec<Solution> = Vec::new();
         let mut conn = self.conn()?;
         match tp.object {
-            spargebra::term::TermPattern::NamedNode(named_node) => {
+            TermPattern::NamedNode(named_node) => {
                 let object = TriplePosition::Constant(self.normalize_iri(named_node.as_str())?);
                 results.extend(query_relation_triples(
                     &mut conn, subject, predicate, object,
                 )?);
             }
-            spargebra::term::TermPattern::Literal(literal) => {
+            TermPattern::Literal(literal) => {
                 let object = TriplePosition::Constant(literal.value().to_string());
                 results.extend(query_property_triples(
                     &mut conn,
@@ -123,12 +131,12 @@ impl TripleStore {
                     LiteralMatchMode::Exact,
                 )?);
             }
-            spargebra::term::TermPattern::Variable(variable) => {
-                let name = variable.as_str().to_string();
-                let object = if let Some(values) = known.get(&name) {
-                    TriplePosition::Bound(name, values.clone())
+            TermPattern::Variable(variable) => {
+                let key = VarKey::Named(variable.as_str().to_string());
+                let object = if let Some(values) = known.get(&key) {
+                    TriplePosition::Bound(key, values.clone())
                 } else {
-                    TriplePosition::Variable(name)
+                    TriplePosition::Variable(key)
                 };
                 results.extend(query_relation_triples(
                     &mut conn,
@@ -160,11 +168,11 @@ impl TripleStore {
     ) -> Result<Vec<Solution>, StoreError> {
         let mut conn = self.conn()?;
         let subject = match tp.subject {
-            spargebra::term::TermPattern::NamedNode(named_node) => {
+            TermPattern::NamedNode(named_node) => {
                 TriplePosition::Constant(self.normalize_iri(named_node.as_str())?)
             }
-            spargebra::term::TermPattern::Variable(variable) => {
-                TriplePosition::Variable(variable.as_str().to_string())
+            TermPattern::Variable(variable) => {
+                TriplePosition::Variable(VarKey::Named(variable.as_str().to_string()))
             }
             _ => {
                 return Err(StoreError::data_error(
@@ -173,22 +181,22 @@ impl TripleStore {
             }
         };
         let predicate = match tp.predicate {
-            spargebra::term::NamedNodePattern::NamedNode(named_node) => {
+            NamedNodePattern::NamedNode(named_node) => {
                 TriplePosition::Constant(self.normalize_iri(named_node.as_str())?)
             }
-            spargebra::term::NamedNodePattern::Variable(variable) => {
-                TriplePosition::Variable(variable.as_str().to_string())
+            NamedNodePattern::Variable(variable) => {
+                TriplePosition::Variable(VarKey::Named(variable.as_str().to_string()))
             }
         };
         let mut results: Vec<Solution> = Vec::new();
         match tp.object {
-            spargebra::term::TermPattern::NamedNode(named_node) => {
+            TermPattern::NamedNode(named_node) => {
                 let object = TriplePosition::Constant(self.normalize_iri(named_node.as_str())?);
                 results.extend(query_relation_triples(
                     &mut conn, subject, predicate, object,
                 )?);
             }
-            spargebra::term::TermPattern::Literal(literal) => {
+            TermPattern::Literal(literal) => {
                 let object = TriplePosition::Constant(literal.value().to_string());
                 results.extend(query_property_triples(
                     &mut conn,
@@ -198,8 +206,8 @@ impl TripleStore {
                     LiteralMatchMode::Exact,
                 )?);
             }
-            spargebra::term::TermPattern::Variable(variable) => {
-                let object = TriplePosition::Variable(variable.as_str().to_string());
+            TermPattern::Variable(variable) => {
+                let object = TriplePosition::Variable(VarKey::Named(variable.as_str().to_string()));
                 results.extend(query_relation_triples(
                     &mut conn,
                     subject.clone(),
@@ -235,7 +243,7 @@ impl TripleStore {
             });
         }
         let mut acc: Vec<Solution> = vec![];
-        let mut acc_vars: HashSet<String> = HashSet::new();
+        let mut acc_vars: HashSet<VarKey> = HashSet::new();
         let mut seeded = false;
 
         for pattern in patterns {
@@ -254,7 +262,7 @@ impl TripleStore {
                 break;
             }
 
-            let shared: HashSet<&String> = pattern_vars.intersection(&acc_vars).collect();
+            let shared: HashSet<&VarKey> = pattern_vars.intersection(&acc_vars).collect();
             if pattern_vars.is_empty() {
                 // no variables in pattern, constant existence check
                 if !self.execute_triple_pattern(pattern)?.is_empty() {
@@ -270,7 +278,7 @@ impl TripleStore {
             } else if shared.len() == pattern_vars.len() {
                 acc.retain(|acc_row| {
                     // build known bindings from this acc row for the shared vars
-                    let known: BTreeMap<String, Vec<Term>> = shared
+                    let known: BTreeMap<VarKey, Vec<Term>> = shared
                         .iter()
                         .filter_map(|v| {
                             acc_row
@@ -284,7 +292,7 @@ impl TripleStore {
                         .unwrap_or(false)
                 });
             } else {
-                let known_values: BTreeMap<String, Vec<Term>> = shared
+                let known_values: BTreeMap<VarKey, Vec<Term>> = shared
                     .iter()
                     .map(|&v| {
                         let vals: Vec<Term> = acc
@@ -328,7 +336,11 @@ impl TripleStore {
             }
         }
 
-        let mut vars: Vec<String> = acc_vars.into_iter().collect();
+        let mut vars: Vec<String> = acc_vars
+            .into_iter()
+            .filter(VarKey::is_named)
+            .map(VarKey::into_name)
+            .collect();
         vars.sort();
 
         Ok(SolutionSet { rows: acc, vars })
@@ -361,16 +373,28 @@ impl TripleStore {
     }
 }
 
-pub(crate) fn triple_pattern_vars(pattern: &TriplePattern) -> HashSet<String> {
-    let mut set: HashSet<String> = HashSet::new();
-    if let TermPattern::Variable(var) = &pattern.subject {
-        set.insert(var.as_str().to_string());
+pub(crate) fn triple_pattern_vars(pattern: &TriplePattern) -> HashSet<VarKey> {
+    let mut set: HashSet<VarKey> = HashSet::new();
+    match &pattern.subject {
+        TermPattern::Variable(var) => {
+            set.insert(VarKey::Named(var.as_str().to_string()));
+        }
+        TermPattern::BlankNode(bnode) => {
+            set.insert(VarKey::Blank(bnode.as_str().to_string()));
+        }
+        _ => {}
     }
     if let NamedNodePattern::Variable(var) = &pattern.predicate {
-        set.insert(var.as_str().to_string());
+        set.insert(VarKey::Named(var.as_str().to_string()));
     }
-    if let TermPattern::Variable(var) = &pattern.object {
-        set.insert(var.as_str().to_string());
+    match &pattern.object {
+        TermPattern::Variable(var) => {
+            set.insert(VarKey::Named(var.as_str().to_string()));
+        }
+        TermPattern::BlankNode(bnode) => {
+            set.insert(VarKey::Blank(bnode.as_str().to_string()));
+        }
+        _ => {}
     }
     set
 }

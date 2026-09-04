@@ -52,7 +52,7 @@ impl TripleStore {
         let mut conn = self.conn()?;
         Ok(diesel::insert_into(objects)
             .values(&values)
-            .on_conflict(value)
+            .on_conflict((kind, value))
             .do_update()
             .set(value.eq(value))
             .returning((value, id))

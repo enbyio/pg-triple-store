@@ -3,16 +3,23 @@ use std::fmt::Display;
 
 use oxrdf::Triple;
 
-use crate::model::triple::Term;
+use crate::model::triple::{Term, VarKey};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Solution {
-    pub bindings: BTreeMap<String, Term>, // var name -> term (BTreeMap = stable ordering)
+    pub(crate) bindings: BTreeMap<VarKey, Term>, // var name -> term (BTreeMap = stable ordering)
 }
 
 impl Solution {
-    pub fn new(map: BTreeMap<String, Term>) -> Self {
+    pub(crate) fn new(map: BTreeMap<VarKey, Term>) -> Self {
         Self { bindings: map }
+    }
+
+    /// Look up a binding by SPARQL variable name (e.g. "p" for `?p`).
+    /// Not sure if this is useful in actual usage but this is used for testing purposes
+    /// Blank-node bindings are not reachable through this API.
+    pub fn get(&self, name: &str) -> Option<&Term> {
+        self.bindings.get(&VarKey::Named(name.to_string()))
     }
 }
 
@@ -21,7 +28,7 @@ impl Display for Solution {
         let s: String = self
             .bindings
             .iter()
-            .map(|(k, v)| format!("{}: {}", k, v))
+            .map(|(k, v)| format!("{:?}: {}", k, v))
             .collect::<Vec<String>>()
             .join(", ");
         write!(f, "{s}")
@@ -30,9 +37,9 @@ impl Display for Solution {
 
 #[derive(Default)]
 pub(crate) struct SolutionBuilder {
-    pub subject_name: Option<String>,
-    pub predicate_name: Option<String>,
-    pub object_name: Option<String>,
+    pub subject_name: Option<VarKey>,
+    pub predicate_name: Option<VarKey>,
+    pub object_name: Option<VarKey>,
 }
 
 impl SolutionBuilder {
@@ -40,15 +47,15 @@ impl SolutionBuilder {
         Self::default()
     }
 
-    pub(crate) fn subject(&mut self, value: String) {
+    pub(crate) fn subject(&mut self, value: VarKey) {
         self.subject_name = Some(value);
     }
 
-    pub(crate) fn predicate(&mut self, value: String) {
+    pub(crate) fn predicate(&mut self, value: VarKey) {
         self.predicate_name = Some(value);
     }
 
-    pub(crate) fn object(&mut self, value: String) {
+    pub(crate) fn object(&mut self, value: VarKey) {
         self.object_name = Some(value);
     }
 
@@ -59,7 +66,7 @@ impl SolutionBuilder {
         results
             .into_iter()
             .map(|res| {
-                let mut map: BTreeMap<String, Term> = BTreeMap::new();
+                let mut map: BTreeMap<VarKey, Term> = BTreeMap::new();
                 if let Some(s) = &self.subject_name {
                     map.insert(s.clone(), Term::Iri(res.0));
                 }
@@ -82,7 +89,7 @@ impl SolutionBuilder {
         results
             .into_iter()
             .map(|res| {
-                let mut map: BTreeMap<String, Term> = BTreeMap::new();
+                let mut map: BTreeMap<VarKey, Term> = BTreeMap::new();
                 if let Some(s) = &self.subject_name {
                     map.insert(s.clone(), Term::Iri(res.0));
                 }
@@ -130,7 +137,13 @@ impl Display for QueryResult {
                         solution_set
                             .vars
                             .iter()
-                            .map(|var| format!("{}: {}", var, row.bindings.get(var).unwrap()))
+                            .map(|var| {
+                                format!(
+                                    "{:?}: {}",
+                                    var,
+                                    row.bindings.get(&VarKey::Named(var.clone())).unwrap()
+                                )
+                            })
                             .collect::<Vec<String>>()
                             .join(", ")
                     })
