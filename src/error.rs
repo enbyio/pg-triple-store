@@ -73,6 +73,12 @@ impl From<oxrdf::IriParseError> for StoreError {
     }
 }
 
+impl From<oxrdf::BlankNodeIdParseError> for StoreError {
+    fn from(value: oxrdf::BlankNodeIdParseError) -> Self {
+        StoreError::data_error(format!("BlankNodeIdParseError: {value}"))
+    }
+}
+
 impl From<diesel::result::Error> for StoreError {
     fn from(value: diesel::result::Error) -> Self {
         StoreError::db_error(DatabaseError::DieselError, value)

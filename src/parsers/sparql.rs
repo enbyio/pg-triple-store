@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use diesel::{QueryDsl, RunQueryDsl};
-use oxrdf::Variable;
+use oxrdf::{BlankNode, Literal, NamedNode, NamedOrBlankNode, Term as OxTerm, Triple, Variable};
 use spargebra::algebra::GraphPattern;
 use spargebra::term::{NamedNodePattern, TermPattern, TriplePattern};
 use spargebra::{Query, SparqlParser};
@@ -12,6 +12,18 @@ use crate::query::solution::{QueryResult, Solution, SolutionSet};
 use crate::query::triples::{query_property_triples, query_relation_triples};
 use crate::store::TripleStore;
 
+macro_rules! continue_on_err {
+    ($result:expr) => {
+        match $result {
+            Ok(val) => val,
+            Err(err) => {
+                log::error!("Error: {:?}", err);
+                continue;
+            }
+        }
+    };
+}
+
 impl TripleStore {
     pub(crate) fn parse_sparql_query(&self, sparql: &str) -> Result<QueryResult, StoreError> {
         let parser = SparqlParser::new();
@@ -19,9 +31,9 @@ impl TripleStore {
         let query = parser.parse_query(&prefix_injected_query)?;
         match query {
             Query::Select { pattern, .. } => self.execute_pattern(pattern),
-            Query::Construct { .. } => {
-                Err(StoreError::sparql_error("Construct is not yet supported"))
-            }
+            Query::Construct {
+                template, pattern, ..
+            } => self.execute_construct(template, pattern),
             Query::Describe { .. } => {
                 Err(StoreError::sparql_error("Describe is not yet supported"))
             }
@@ -64,6 +76,99 @@ impl TripleStore {
                 "GraphPattern is not yet supported",
             )),
         }
+    }
+
+    fn execute_construct(
+        &self,
+        template: Vec<TriplePattern>,
+        pattern: GraphPattern,
+    ) -> Result<QueryResult, StoreError> {
+        let QueryResult::Solutions(solutions) = self.execute_pattern(pattern)? else {
+            return Err(StoreError::sparql_error(
+                "Construct requires a solution pattern to work",
+            ));
+        };
+        let mut triples: HashSet<Triple> = HashSet::new();
+
+        for row in solutions.rows {
+            for triple in self.instantiate(&template, &row) {
+                triples.insert(triple);
+            }
+        }
+
+        Ok(QueryResult::Graph(triples.into_iter().collect()))
+    }
+
+    fn instantiate(&self, patterns: &[TriplePattern], row: &Solution) -> Vec<Triple> {
+        let mut triples: Vec<Triple> = Vec::new();
+
+        let mut bnodes: HashMap<String, BlankNode> = HashMap::new();
+
+        for tp in patterns {
+            let subject = match &tp.subject {
+                TermPattern::NamedNode(nn) => NamedOrBlankNode::NamedNode(continue_on_err!(self
+                    .normalize_iri(nn.as_str())
+                    .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from)))),
+                TermPattern::BlankNode(bn) => NamedOrBlankNode::BlankNode(
+                    bnodes.entry(bn.as_str().to_string()).or_default().clone(),
+                ),
+                TermPattern::Variable(var) => match row.get(var.as_str()) {
+                    Some(Term::Iri(iri)) => {
+                        let node = continue_on_err!(self
+                            .normalize_iri(iri)
+                            .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from)));
+                        NamedOrBlankNode::NamedNode(node)
+                    }
+                    Some(Term::BlankNode(bnode)) => {
+                        let node =
+                            continue_on_err!(BlankNode::new(bnode).map_err(StoreError::from));
+                        NamedOrBlankNode::BlankNode(node)
+                    }
+                    _ => continue,
+                },
+                _ => continue, // Literal / Triple are not valid as subjects
+            };
+            let predicate = match &tp.predicate {
+                NamedNodePattern::NamedNode(nn) => continue_on_err!(self
+                    .normalize_iri(nn.as_str())
+                    .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from))),
+                NamedNodePattern::Variable(var) => match row.get(var.as_str()) {
+                    Some(Term::Iri(iri)) => continue_on_err!(NamedNode::new(iri.clone())),
+                    _ => continue,
+                },
+            };
+            let object: OxTerm = match &tp.object {
+                TermPattern::NamedNode(nn) => OxTerm::NamedNode(continue_on_err!(self
+                    .normalize_iri(nn.as_str())
+                    .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from)))),
+                TermPattern::BlankNode(bn) => {
+                    OxTerm::BlankNode(bnodes.entry(bn.as_str().to_string()).or_default().clone())
+                }
+                TermPattern::Literal(lit) => OxTerm::Literal(lit.clone()),
+                TermPattern::Variable(var) => match row.get(var.as_str()) {
+                    Some(Term::Iri(iri)) => {
+                        let node = continue_on_err!(self
+                            .normalize_iri(iri)
+                            .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from)));
+                        OxTerm::NamedNode(node)
+                    }
+                    Some(Term::BlankNode(bnode)) => {
+                        let node =
+                            continue_on_err!(BlankNode::new(bnode).map_err(StoreError::from));
+                        OxTerm::BlankNode(node)
+                    }
+                    Some(Term::Literal { value, datatype }) => {
+                        let lit_type = continue_on_err!(NamedNode::new(datatype));
+                        OxTerm::Literal(Literal::new_typed_literal(value, lit_type))
+                    }
+                    None => continue,
+                },
+                _ => continue, // rdf star not supported for now
+            };
+            triples.push(Triple::new(subject, predicate, object));
+        }
+
+        triples
     }
 
     pub(crate) fn execute_triple_pattern_with_bindings(

@@ -40,21 +40,17 @@ pub(crate) enum TriplePosition {
 pub enum Term {
     Iri(String),
     Literal { value: String, datatype: String },
-    // BlankNode(String), later
+    BlankNode(String),
 }
 
 impl Display for Term {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Term::Iri(iri) => write!(f, "{iri}"),
+            Term::Iri(iri) => write!(f, "IRI({iri})"),
             Term::Literal { value, .. } => {
-                // if datatype.eq("Unknown") {
-                //     write!(f, "{value}")
-                // } else {
-                //     write!(f, "{value}@{datatype}")
-                // }
                 write!(f, "{value}")
             }
+            Term::BlankNode(name) => write!(f, "BNode({name})"),
         }
     }
 }

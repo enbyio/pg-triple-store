@@ -396,6 +396,8 @@ fn term_to_value(t: &Term) -> Value {
             }
             Value::Str(value.clone())
         }
+        _ => panic!("blank node can not be converted to internal value")
+
     }
 }
 
