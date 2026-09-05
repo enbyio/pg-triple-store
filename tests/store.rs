@@ -1,4 +1,5 @@
 use oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
+use pg_triple_store::query::solution::QueryResult;
 use pg_triple_store::store::TripleStore;
 
 use crate::common::init_store;
@@ -23,6 +24,26 @@ fn test_import_rdf_file() {
     let store = TripleStore::new_from_env().expect("DB connection failed");
     store.reset_db().expect("reset failed");
     store.import_rdfxml_file("tests/test.rdf").unwrap()
+}
+
+#[test]
+fn test_export_rdfxml_file() {
+    let store = init_store();
+    let sol = store
+        .query(
+            "
+        CONSTRUCT {
+            ?s ex:knows ex:alice .
+        }
+        WHERE {
+            ex:alice ex:knows ?s .
+        }",
+        )
+        .unwrap();
+    let QueryResult::Graph(graph) = sol else {
+        panic!("Construct Result should be of type graph")
+    };
+    println!("{}", store.export_as_rdfxml(&graph).unwrap());
 }
 
 #[test]
