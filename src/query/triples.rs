@@ -182,7 +182,7 @@ pub(crate) fn query_relation_triples(
         TriplePosition::Variable(var) => {
             log::info!("VAR is: {var:?}");
             builder.subject(var)
-        },
+        }
         TriplePosition::Bound(var, terms) => {
             let iris: Vec<String> = terms
                 .iter()
@@ -192,7 +192,8 @@ pub(crate) fn query_relation_triples(
                 })
                 .collect();
             builder.subject(var);
-            relation_query = relation_query.filter(subject_objects.field(objects::value).eq_any(iris))
+            relation_query =
+                relation_query.filter(subject_objects.field(objects::value).eq_any(iris))
         }
     }
     match predicate {
@@ -232,7 +233,8 @@ pub(crate) fn query_relation_triples(
                 })
                 .collect();
             builder.object(var);
-            relation_query = relation_query.filter(object_objects.field(objects::value).eq_any(iris))
+            relation_query =
+                relation_query.filter(object_objects.field(objects::value).eq_any(iris))
         }
     }
 
@@ -269,7 +271,7 @@ pub(crate) fn query_property_triples(
         TriplePosition::Variable(var) => {
             log::info!("VAR is: {var:?}");
             builder.subject(var)
-        },
+        }
         TriplePosition::Bound(var, terms) => {
             let iris: Vec<String> = terms
                 .iter()

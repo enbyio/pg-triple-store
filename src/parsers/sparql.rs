@@ -106,17 +106,19 @@ impl TripleStore {
 
         for tp in patterns {
             let subject = match &tp.subject {
-                TermPattern::NamedNode(nn) => NamedOrBlankNode::NamedNode(continue_on_err!(self
-                    .normalize_iri(nn.as_str())
-                    .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from)))),
+                TermPattern::NamedNode(nn) => NamedOrBlankNode::NamedNode(continue_on_err!(
+                    self.normalize_iri(nn.as_str())
+                        .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from))
+                )),
                 TermPattern::BlankNode(bn) => NamedOrBlankNode::BlankNode(
                     bnodes.entry(bn.as_str().to_string()).or_default().clone(),
                 ),
                 TermPattern::Variable(var) => match row.get(var.as_str()) {
                     Some(Term::Iri(iri)) => {
-                        let node = continue_on_err!(self
-                            .normalize_iri(iri)
-                            .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from)));
+                        let node = continue_on_err!(
+                            self.normalize_iri(iri)
+                                .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from))
+                        );
                         NamedOrBlankNode::NamedNode(node)
                     }
                     Some(Term::BlankNode(bnode)) => {
@@ -129,27 +131,30 @@ impl TripleStore {
                 _ => continue, // Literal / Triple are not valid as subjects
             };
             let predicate = match &tp.predicate {
-                NamedNodePattern::NamedNode(nn) => continue_on_err!(self
-                    .normalize_iri(nn.as_str())
-                    .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from))),
+                NamedNodePattern::NamedNode(nn) => continue_on_err!(
+                    self.normalize_iri(nn.as_str())
+                        .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from))
+                ),
                 NamedNodePattern::Variable(var) => match row.get(var.as_str()) {
                     Some(Term::Iri(iri)) => continue_on_err!(NamedNode::new(iri.clone())),
                     _ => continue,
                 },
             };
             let object: OxTerm = match &tp.object {
-                TermPattern::NamedNode(nn) => OxTerm::NamedNode(continue_on_err!(self
-                    .normalize_iri(nn.as_str())
-                    .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from)))),
+                TermPattern::NamedNode(nn) => OxTerm::NamedNode(continue_on_err!(
+                    self.normalize_iri(nn.as_str())
+                        .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from))
+                )),
                 TermPattern::BlankNode(bn) => {
                     OxTerm::BlankNode(bnodes.entry(bn.as_str().to_string()).or_default().clone())
                 }
                 TermPattern::Literal(lit) => OxTerm::Literal(lit.clone()),
                 TermPattern::Variable(var) => match row.get(var.as_str()) {
                     Some(Term::Iri(iri)) => {
-                        let node = continue_on_err!(self
-                            .normalize_iri(iri)
-                            .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from)));
+                        let node = continue_on_err!(
+                            self.normalize_iri(iri)
+                                .and_then(|iri| NamedNode::new(iri).map_err(StoreError::from))
+                        );
                         OxTerm::NamedNode(node)
                     }
                     Some(Term::BlankNode(bnode)) => {
