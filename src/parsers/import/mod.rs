@@ -1,2 +1,2 @@
-pub mod rdf;
+pub mod rdfxml;
 pub mod ttl;
