@@ -834,3 +834,125 @@ fn test_add_prefix() {
     let store = init_store();
     store.add_prefix("http://local-test.org", "lt").unwrap()
 }
+
+// ── Test 1: blank node correctly acts as an existential join variable ─────────
+//
+// Find pairs of distinct people who work at the *same* organisation, without
+// ever exposing that organisation as a bound variable.
+#[test]
+fn blank_node_joins_but_is_not_projected() {
+    let store = init_store(); // loads the turtle fixture
+
+    let query = "
+        SELECT ?person1 ?person2 WHERE {
+            ?person1 ex:worksAt _:org .
+            ?person2 ex:worksAt _:org .
+            FILTER(?person1 != ?person2)
+        }
+    ";
+
+    let result = store.query(query).unwrap();
+    let sol = match result {
+        QueryResult::Solutions(s) => s,
+        _ => panic!("expected solutions"),
+    };
+
+    // The blank node label must never leak into the projected variable list.
+    assert_eq!(sol.vars, vec!["person1", "person2"]);
+
+    // orgA has alice+bob → 2 ordered pairs; orgB has only carol → no pairs.
+    let mut pairs: Vec<(String, String)> = sol
+        .rows
+        .iter()
+        .map(|r| {
+            (
+                r.get("person1").unwrap().to_string(),
+                r.get("person2").unwrap().to_string(),
+            )
+        })
+        .collect();
+    pairs.sort();
+
+    assert_eq!(
+        pairs,
+        vec![
+            (
+                "http://example.org/alice".to_string(),
+                "http://example.org/bob".to_string()
+            ),
+            (
+                "http://example.org/bob".to_string(),
+                "http://example.org/alice".to_string()
+            ),
+        ]
+    );
+}
+
+// ── Test 2: a blank node label and a variable of the same name are distinct ───
+//
+// `_:x` and `?x` share the textual name "x" but must be independent join keys.
+// If the implementation incorrectly collapsed them into one variable, the
+// engine would wrongly constrain the two patterns to agree on "x", cutting
+// the result set from a full cross join (8 rows) down to only the rows where
+// the knows-subject happens to also be an orgA worker (4 rows).
+#[test]
+fn blank_node_and_variable_with_same_name_do_not_collide() {
+    let store = init_store();
+
+    let query = "
+        SELECT ?friend ?x WHERE {
+            _:x ex:knows ?friend .
+            ?x ex:worksAt ex:orgA .
+        }
+    ";
+
+    let result = store.query(query).unwrap();
+    let sol = match result {
+        QueryResult::Solutions(s) => s,
+        _ => panic!("expected solutions"),
+    };
+
+    assert_eq!(sol.vars, vec!["friend", "x"]);
+
+    // Correct (unmerged) behaviour: cross product of
+    //   knows-triples: (alice,bob) (alice,carol) (bob,carol) (bob,dave) (alice,dave)
+    // with
+    //   orgA workers: alice, bob
+    // => 5 * 2 = 8 rows.
+    assert_eq!(
+        sol.rows.len(),
+        10,
+        "blank node `_:x` and variable `?x` appear to have been merged into one key"
+    );
+
+    let mut pairs: Vec<(String, String)> = sol
+        .rows
+        .iter()
+        .map(|r| {
+            (
+                r.get("friend").unwrap().to_string(),
+                r.get("x").unwrap().to_string(),
+            )
+        })
+        .collect();
+    pairs.sort();
+
+    let mut expected = vec![
+        ("http://example.org/bob", "http://example.org/alice"),
+        ("http://example.org/bob", "http://example.org/bob"),
+        ("http://example.org/carol", "http://example.org/alice"),
+        ("http://example.org/carol", "http://example.org/alice"),
+        ("http://example.org/carol", "http://example.org/bob"),
+        ("http://example.org/carol", "http://example.org/bob"),
+        ("http://example.org/dave", "http://example.org/alice"),
+        ("http://example.org/dave", "http://example.org/bob"),
+        ("http://example.org/dave", "http://example.org/alice"),
+        ("http://example.org/dave", "http://example.org/bob"),
+    ]
+    .into_iter()
+    .map(|(a, b)| (a.to_string(), b.to_string()))
+    .collect::<Vec<_>>();
+    expected.sort();
+
+    assert_eq!(pairs, expected);
+}
