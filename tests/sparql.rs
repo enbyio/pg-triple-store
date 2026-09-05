@@ -1,84 +1,6 @@
-use oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
-use pg_triple_store::query::solution::{QueryResult, SolutionSet};
-use pg_triple_store::store::TripleStore;
+use crate::common::{assert_count, assert_empty, assert_values, init_store, select, values};
 
-fn init_store() -> TripleStore {
-    let _ = env_logger::Builder::from_default_env()
-        .filter(None, log::LevelFilter::Debug)
-        .try_init();
-    let store = TripleStore::new_from_env().expect("DB connection failed");
-    store.reset_db().expect("reset failed");
-    store
-        .import_turtle_file("tests/test.ttl")
-        .expect("turtle import failed");
-    store
-}
-
-/// Execute a SELECT query and return the `SolutionSet`.
-/// Panics with a descriptive message if the query errors or returns a non-Select result.
-fn select(store: &TripleStore, sparql: &str) -> SolutionSet {
-    match store.query(sparql).expect(sparql) {
-        QueryResult::Solutions(s) => s,
-        other => panic!("expected Solutions, got: {other}"),
-    }
-}
-
-/// Collect all values of one variable from a solution set.
-fn values(sol: &SolutionSet, var: &str) -> Vec<String> {
-    let mut out: Vec<String> = sol
-        .rows
-        .iter()
-        .filter_map(|row| row.get(var))
-        .map(|t| t.to_string())
-        .collect();
-    out.sort();
-    out
-}
-
-/// Assert `expected` values (sorted) for one variable in a solution set.
-fn assert_values(sol: &SolutionSet, var: &str, mut expected: Vec<&str>) {
-    expected.sort();
-    let got = values(sol, var);
-    assert_eq!(
-        got,
-        expected.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
-        "variable ?{var} mismatch\ngot:      {got:?}\nexpected: {expected:?}"
-    );
-}
-
-fn assert_count(sol: &SolutionSet, n: usize) {
-    assert_eq!(
-        sol.rows.len(),
-        n,
-        "expected {n} rows, got {}\nrows: {:#?}",
-        sol.rows.len(),
-        sol.rows
-    );
-}
-
-fn assert_empty(sol: &SolutionSet) {
-    assert_count(sol, 0);
-}
-
-#[test]
-fn test_import_turtle_file() {
-    let _ = env_logger::Builder::from_default_env()
-        .filter(None, log::LevelFilter::Debug)
-        .try_init();
-    let store = TripleStore::new_from_env().expect("DB connection failed");
-    store.reset_db().expect("reset failed");
-    store.import_turtle_file("tests/test.ttl").unwrap()
-}
-
-#[test]
-fn test_import_rdf_file() {
-    let _ = env_logger::Builder::from_default_env()
-        .filter(None, log::LevelFilter::Debug)
-        .try_init();
-    let store = TripleStore::new_from_env().expect("DB connection failed");
-    store.reset_db().expect("reset failed");
-    store.import_rdfxml_file("tests/test.rdf").unwrap()
-}
+mod common;
 
 #[test]
 fn test_cross_product_no_shared_vars() {
@@ -733,108 +655,6 @@ fn test_no_filter_returns_all_names() {
     assert_values(&sol, "name", vec!["Alice", "Bob", "Carol", "Dave"]);
 }
 
-#[test]
-fn test_insert_triple() {
-    let store = init_store();
-    store
-        .insert_triple(Triple {
-            subject: NamedOrBlankNode::NamedNode(
-                NamedNode::new("http://example.org/alice").unwrap(),
-            ),
-            predicate: NamedNode::new("http://example.org/worksAt").unwrap(),
-            object: Term::NamedNode(NamedNode::new("http://example.org/orgA").unwrap()),
-        })
-        .unwrap();
-}
-
-#[test]
-fn test_insert_triples() {
-    let store = init_store();
-    let triples = &[
-        Triple {
-            subject: NamedOrBlankNode::NamedNode(
-                NamedNode::new("http://example.org/alice").unwrap(),
-            ),
-            predicate: NamedNode::new("http://example.org/worksAt").unwrap(),
-            object: Term::NamedNode(NamedNode::new("http://example.org/orgA").unwrap()),
-        },
-        Triple {
-            subject: NamedOrBlankNode::NamedNode(
-                NamedNode::new("http://example.org/carol").unwrap(),
-            ),
-            predicate: NamedNode::new("http://example.org/knows").unwrap(),
-            object: Term::NamedNode(NamedNode::new("http://example.org/alice").unwrap()),
-        },
-    ];
-    store.insert_triples(triples).unwrap();
-}
-
-#[test]
-fn test_describe_object() {
-    let store = init_store();
-    let id = store
-        .get_id_from_iri(
-            "http://example.org/alice",
-            pg_triple_store::store::ElementType::Object,
-        )
-        .unwrap();
-    println!("object id is {id}");
-    let relations = store.describe_object_by_id(id).unwrap();
-    assert_eq!(relations.len(), 6)
-}
-
-#[test]
-fn test_describe_predicate() {
-    let store = init_store();
-    let id = store
-        .get_id_from_iri(
-            "http://example.org/knows",
-            pg_triple_store::store::ElementType::Predicate,
-        )
-        .unwrap();
-    println!("predicate id is {id}");
-    let relations = store.describe_predicate_by_id(id).unwrap();
-    assert_eq!(relations.len(), 5)
-}
-
-#[test]
-fn test_relation_subject_list() {
-    let store = init_store();
-    let object_id = store
-        .get_id_from_iri(
-            "http://example.org/carol",
-            pg_triple_store::store::ElementType::Object,
-        )
-        .unwrap();
-    println!("object id is {object_id}");
-    let predicate_id = store
-        .get_id_from_iri(
-            "http://example.org/knows",
-            pg_triple_store::store::ElementType::Predicate,
-        )
-        .unwrap();
-    println!("predicate id is {predicate_id}");
-    let subjects = store
-        .get_relation_subject_list(predicate_id, object_id)
-        .unwrap();
-    assert_eq!(subjects.len(), 2)
-}
-
-#[test]
-fn test_shorten_iri() {
-    let store = init_store();
-    assert_eq!(
-        store.get_short_iri("http://example.org/bob").unwrap(),
-        "ex:bob"
-    )
-}
-
-#[test]
-fn test_add_prefix() {
-    let store = init_store();
-    store.add_prefix("http://local-test.org", "lt").unwrap()
-}
-
 // ── Test 1: blank node correctly acts as an existential join variable ─────────
 //
 // Find pairs of distinct people who work at the *same* organisation, without
@@ -843,19 +663,16 @@ fn test_add_prefix() {
 fn blank_node_joins_but_is_not_projected() {
     let store = init_store(); // loads the turtle fixture
 
-    let query = "
+    let sol = select(
+        &store,
+        "
         SELECT ?person1 ?person2 WHERE {
             ?person1 ex:worksAt _:org .
             ?person2 ex:worksAt _:org .
             FILTER(?person1 != ?person2)
         }
-    ";
-
-    let result = store.query(query).unwrap();
-    let sol = match result {
-        QueryResult::Solutions(s) => s,
-        _ => panic!("expected solutions"),
-    };
+    ",
+    );
 
     // The blank node label must never leak into the projected variable list.
     assert_eq!(sol.vars, vec!["person1", "person2"]);
@@ -899,18 +716,15 @@ fn blank_node_joins_but_is_not_projected() {
 fn blank_node_and_variable_with_same_name_do_not_collide() {
     let store = init_store();
 
-    let query = "
+    let sol = select(
+        &store,
+        "
         SELECT ?friend ?x WHERE {
             _:x ex:knows ?friend .
             ?x ex:worksAt ex:orgA .
         }
-    ";
-
-    let result = store.query(query).unwrap();
-    let sol = match result {
-        QueryResult::Solutions(s) => s,
-        _ => panic!("expected solutions"),
-    };
+    ",
+    );
 
     assert_eq!(sol.vars, vec!["friend", "x"]);
 
