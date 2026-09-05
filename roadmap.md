@@ -1,11 +1,11 @@
 # Roadmap
-current version 0.2.1
+current version 0.2.2
 
-## 0.2.2
-- add support for blank nodes in queries (done)
-- support Construct Pattern in sparql queries (done)
+## 0.2.2 new features
+- add support for blank nodes in queries 
+- support Construct Pattern in sparql queries 
 - add export function for rdfxml
 
-## upcoming later
+## next steps
 - add Describe and Ask Queries
 - add rdfxml triple dump function
