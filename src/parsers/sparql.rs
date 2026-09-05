@@ -95,7 +95,7 @@ impl TripleStore {
             }
             _ => {
                 return Err(StoreError::sparql_error(
-                    "Blank Node, Literal or Triple not supported as subject",
+                    "Literal or Triple not supported as subject",
                 ));
             }
         };
@@ -152,9 +152,30 @@ impl TripleStore {
                     LiteralMatchMode::Exact,
                 )?);
             }
+            TermPattern::BlankNode(bnode) => {
+                let key = VarKey::Blank(bnode.as_str().to_string());
+                let object = if let Some(values) = known.get(&key) {
+                    TriplePosition::Bound(key, values.clone())
+                } else {
+                    TriplePosition::Variable(key)
+                };
+                results.extend(query_relation_triples(
+                    &mut conn,
+                    subject.clone(),
+                    predicate.clone(),
+                    object.clone(),
+                )?);
+                results.extend(query_property_triples(
+                    &mut conn,
+                    subject,
+                    predicate,
+                    object,
+                    LiteralMatchMode::Exact,
+                )?);
+            }
             _ => {
                 return Err(StoreError::data_error(
-                    "Blank Node or Triple are not supported as objects",
+                    "Triple are not supported as objects",
                 ));
             }
         };
@@ -174,9 +195,12 @@ impl TripleStore {
             TermPattern::Variable(variable) => {
                 TriplePosition::Variable(VarKey::Named(variable.as_str().to_string()))
             }
+            TermPattern::BlankNode(bnode) => {
+                TriplePosition::Variable(VarKey::Blank(bnode.as_str().to_string()))
+            }
             _ => {
                 return Err(StoreError::data_error(
-                    "Blank Node, Literal or Triple not supported as subject",
+                    "Literal or Triple not supported as subject",
                 ));
             }
         };
@@ -222,9 +246,25 @@ impl TripleStore {
                     LiteralMatchMode::Exact,
                 )?);
             }
+            TermPattern::BlankNode(variable) => {
+                let object = TriplePosition::Variable(VarKey::Blank(variable.as_str().to_string()));
+                results.extend(query_relation_triples(
+                    &mut conn,
+                    subject.clone(),
+                    predicate.clone(),
+                    object.clone(),
+                )?);
+                results.extend(query_property_triples(
+                    &mut conn,
+                    subject,
+                    predicate,
+                    object,
+                    LiteralMatchMode::Exact,
+                )?);
+            }
             _ => {
                 return Err(StoreError::data_error(
-                    "Blank Node or Triple are not supported as objects",
+                    "Triples are not supported as objects",
                 ));
             }
         }
