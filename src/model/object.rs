@@ -1,9 +1,9 @@
+use diesel::Selectable;
 use diesel::deserialize::{FromSqlRow, Queryable};
 use diesel::expression::AsExpression;
 use diesel::pg::Pg;
 use diesel::prelude::Insertable;
 use diesel::sql_types::Text;
-use diesel::Selectable;
 
 use crate::schema::objects;
 

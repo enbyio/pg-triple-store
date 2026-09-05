@@ -43,14 +43,15 @@ pub enum Term {
     BlankNode(String),
 }
 
+// note for later: it might be useful to differentiate between iri and bnode here but that needs changing in the test cases
 impl Display for Term {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Term::Iri(iri) => write!(f, "IRI({iri})"),
+            Term::Iri(iri) => write!(f, "{iri}"),
             Term::Literal { value, .. } => {
                 write!(f, "{value}")
             }
-            Term::BlankNode(name) => write!(f, "BNode({name})"),
+            Term::BlankNode(name) => write!(f, "{name}"),
         }
     }
 }

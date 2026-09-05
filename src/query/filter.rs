@@ -106,7 +106,10 @@ fn eval(expr: &Expression, row: &Solution) -> Option<Value> {
             Some(Value::Str(val.to_string()))
         }
 
-        Expression::Variable(var) => row.bindings.get(&named_var_key(var.as_str())).map(term_to_value),
+        Expression::Variable(var) => row
+            .bindings
+            .get(&named_var_key(var.as_str()))
+            .map(term_to_value),
 
         Expression::NamedNode(nn) => Some(Value::Iri(nn.as_str().to_string())),
 
@@ -185,7 +188,9 @@ fn eval(expr: &Expression, row: &Solution) -> Option<Value> {
         Expression::Coalesce(list) => list.iter().find_map(|e| eval(e, row)),
 
         // ── BOUND(?var) — own Expression variant in spargebra 0.4 ──
-        Expression::Bound(var) => Some(Value::Bool(row.bindings.contains_key(&named_var_key(var.as_str())))),
+        Expression::Bound(var) => Some(Value::Bool(
+            row.bindings.contains_key(&named_var_key(var.as_str())),
+        )),
 
         // ── EXISTS / NOT EXISTS — needs sub-query execution; skip for now ──
         Expression::Exists(_) => None,
@@ -312,7 +317,8 @@ fn eval_function(func: &Function, args: &[Expression], row: &Solution) -> Option
             //   as `"value"@lang` or `"value"^^<type>`. We store the raw type IRI
             //   or "Unknown". Extract the language from the term directly.
             if let Some(Expression::Variable(v)) = args.first()
-                && let Some(Term::Literal { datatype, .. }) = row.bindings.get(&named_var_key(v.as_str()))
+                && let Some(Term::Literal { datatype, .. }) =
+                    row.bindings.get(&named_var_key(v.as_str()))
             {
                 // Convention: if the datatype is stored as "@<lang>" it's a
                 // language-tagged literal; if it's "Unknown" or an XSD IRI, no lang.
@@ -338,7 +344,8 @@ fn eval_function(func: &Function, args: &[Expression], row: &Solution) -> Option
         }
         Datatype => {
             if let Some(Expression::Variable(v)) = args.first()
-                && let Some(Term::Literal { datatype, .. }) = row.bindings.get(&named_var_key(v.as_str()))
+                && let Some(Term::Literal { datatype, .. }) =
+                    row.bindings.get(&named_var_key(v.as_str()))
                 && !datatype.starts_with('@')
             {
                 return Some(Value::Iri(datatype.clone()));
@@ -396,8 +403,7 @@ fn term_to_value(t: &Term) -> Value {
             }
             Value::Str(value.clone())
         }
-        _ => panic!("blank node can not be converted to internal value")
-
+        _ => panic!("blank node can not be converted to internal value"),
     }
 }
 

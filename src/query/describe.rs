@@ -1,4 +1,4 @@
-use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, alias};
 use oxrdf::{Literal, NamedNode, NamedOrBlankNode, Term, Triple};
 
 use crate::error::StoreError;
