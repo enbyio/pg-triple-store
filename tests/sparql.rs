@@ -1,6 +1,30 @@
+use pg_triple_store::query::solution::QueryResult;
+
 use crate::common::{assert_count, assert_empty, assert_values, init_store, select, values};
 
 mod common;
+
+#[test]
+fn test_construct() {
+    let store = init_store();
+    let sol = store
+        .query(
+            "
+        CONSTRUCT {
+            ?s ex:knows ex:alice .
+        }
+        WHERE {
+            ex:alice ex:knows ?s .
+        }",
+        )
+        .unwrap();
+    let QueryResult::Graph(graph) = sol else {
+        panic!("Construct Result should be of type graph")
+    };
+    for t in graph {
+        println!("{t}")
+    }
+}
 
 #[test]
 fn test_cross_product_no_shared_vars() {
