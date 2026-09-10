@@ -1,7 +1,7 @@
 CREATE TABLE relations (
-  subject   BIGINT NOT NULL REFERENCES objects(id),
+  subject   BIGINT NOT NULL REFERENCES entities(id),
   predicate BIGINT NOT NULL REFERENCES predicates(id),
-  object    BIGINT NOT NULL REFERENCES objects(id),
+  object    BIGINT NOT NULL REFERENCES entities(id),
   PRIMARY KEY (subject, predicate, object)
 );
 

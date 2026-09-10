@@ -1,5 +1,5 @@
 CREATE TABLE properties (
-  subject       BIGINT NOT NULL REFERENCES objects(id),
+  subject       BIGINT NOT NULL REFERENCES entities(id),
   predicate     BIGINT NOT NULL REFERENCES predicates(id),
   literal_value TEXT NOT NULL,
   literal_type  TEXT,
