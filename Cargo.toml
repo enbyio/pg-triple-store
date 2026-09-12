@@ -2,6 +2,7 @@
 name = "pg-triple-store"
 version = "0.3.0"
 edition = "2024"
+authors = ["enbyio"]
 
 [dependencies]
 diesel = { version = "2.3.12", features = ["postgres", "r2d2"] }
