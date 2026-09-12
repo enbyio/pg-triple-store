@@ -1,3 +1,4 @@
+pub(crate) mod entity;
 pub(crate) mod object;
 pub(crate) mod predicate;
 pub(crate) mod prefix;

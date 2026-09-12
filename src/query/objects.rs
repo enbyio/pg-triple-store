@@ -1,35 +1,58 @@
 use std::collections::{HashMap, HashSet};
 
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use diesel::sql_types::BigInt;
+use diesel::{
+    sql_query, BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl,
+    RunQueryDsl,
+};
 
 use crate::error::StoreError;
-use crate::model::object::{NewObject, Object};
+use crate::model::entity::NewEntity;
+use crate::model::object::{NewObject, ObjectKey};
 use crate::store::TripleStore;
 
-use crate::schema::objects::dsl::*;
+const OBJECT_ENTITY_TYPE: i16 = 1;
 
 impl TripleStore {
     /// Checks if an object with a given iri exists and if not inserts it. ID of the object is returned regardless
-    pub(crate) fn upsert_object(&self, object: impl Into<NewObject>) -> Result<i64, StoreError> {
-        let object_iri = object.into().value;
+    pub(crate) fn upsert_object(&self, key: impl Into<ObjectKey>) -> Result<i64, StoreError> {
+        use crate::schema::objects::dsl::*;
+        let key = key.into();
         let mut conn = self.conn()?;
-        if let Some(existing_id) = objects
-            .filter(value.eq(&object_iri))
-            .select(id)
-            .first::<i64>(&mut conn)
-            .optional()?
-        {
-            return Ok(existing_id);
-        }
-        Ok(diesel::insert_into(objects)
-            .values(value.eq(&object_iri))
-            .on_conflict_do_nothing()
-            .get_result::<Object>(&mut conn)?
-            .id)
+        conn.transaction(|conn| {
+            let lock_key = key.hash();
+            sql_query("SELECT pg_advisory_xact_lock($1)")
+                .bind::<BigInt, _>(lock_key)
+                .execute(conn)?;
+            if let Some(existing) = objects
+                .filter(kind.eq(key.kind).and(value.eq(&key.value)))
+                .select(id)
+                .first::<i64>(conn)
+                .optional()?
+            {
+                return Ok(existing);
+            }
+
+            use crate::schema::entities;
+
+            let new_id: i64 = diesel::insert_into(entities::table)
+                .values(NewEntity {
+                    entity_type: OBJECT_ENTITY_TYPE,
+                })
+                .returning(entities::id)
+                .get_result(conn)?;
+
+            diesel::insert_into(objects)
+                .values(NewObject::from_key(key, new_id))
+                .execute(conn)?;
+
+            Ok(new_id)
+        })
     }
 
     /// checks if an object exists and returns either said objects id or none, if the object doesn't exist
     pub(crate) fn get_object_id(&self, object_iri: impl Into<String>) -> Option<i64> {
+        use crate::schema::objects::dsl::*;
         let object_iri = object_iri.into();
         let mut conn = self
             .conn()
@@ -46,18 +69,49 @@ impl TripleStore {
 
     pub(crate) fn batch_upsert_objects(
         &self,
-        object_iris: HashSet<NewObject>,
+        keys: HashSet<ObjectKey>,
     ) -> Result<HashMap<String, i64>, StoreError> {
-        let values: Vec<NewObject> = object_iris.into_iter().collect();
+        use crate::schema::objects::dsl::*;
         let mut conn = self.conn()?;
-        Ok(diesel::insert_into(objects)
-            .values(&values)
-            .on_conflict((kind, value))
-            .do_update()
-            .set(value.eq(value))
-            .returning((value, id))
-            .get_results::<(String, i64)>(&mut conn)?
-            .into_iter()
-            .collect())
+        conn.transaction(|conn| {
+            let mut sorted_keys: Vec<ObjectKey> = keys.into_iter().collect();
+            sorted_keys.sort_by_key(|k| k.hash());
+            for k in &sorted_keys {
+                sql_query("SELECT pg_advisory_xact_lock($1)")
+                    .bind::<BigInt, _>(k.hash())
+                    .execute(conn)?;
+            }
+
+            // find which already exist
+            let mut result: HashMap<String, i64> = HashMap::new();
+            let mut missing: Vec<ObjectKey> = Vec::new();
+            for k in sorted_keys {
+                if let Some(existing_id) = objects
+                    .filter(kind.eq(k.kind).and(value.eq(&k.value)))
+                    .select(id)
+                    .first::<i64>(conn)
+                    .optional()?
+                {
+                    result.insert(k.value, existing_id);
+                } else {
+                    missing.push(k.clone());
+                }
+            }
+
+            use crate::schema::entities;
+            // mint entity ids for the missing ones, then insert objects
+            for k in missing {
+                let new_id: i64 = diesel::insert_into(entities::table)
+                    .values(NewEntity { entity_type: 1 })
+                    .returning(entities::id)
+                    .get_result(conn)?;
+                diesel::insert_into(objects)
+                    .values(NewObject::from_key(k.clone(), new_id))
+                    .execute(conn)?;
+                result.insert(k.value, new_id);
+            }
+
+            Ok(result)
+        })
     }
 }

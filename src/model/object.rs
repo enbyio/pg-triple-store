@@ -1,9 +1,9 @@
-use diesel::Selectable;
 use diesel::deserialize::{FromSqlRow, Queryable};
 use diesel::expression::AsExpression;
 use diesel::pg::Pg;
 use diesel::prelude::Insertable;
 use diesel::sql_types::Text;
+use diesel::Selectable;
 
 use crate::schema::objects;
 
@@ -49,27 +49,59 @@ pub struct Object {
     pub value: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ObjectKey {
+    pub(crate) value: String,
+    pub(crate) kind: ObjectKind,
+}
+
+impl ObjectKey {
+    pub fn new_iri(value: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+            kind: ObjectKind::Iri,
+        }
+    }
+    pub fn new_blank(value: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+            kind: ObjectKind::Blank,
+        }
+    }
+
+    pub fn hash(&self) -> i64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.kind.hash(&mut h);
+        self.value.hash(&mut h);
+        h.finish() as i64
+    }
+}
+
+// replaces the old `impl From<&str> for NewObject`
+impl From<&str> for ObjectKey {
+    fn from(value: &str) -> Self {
+        Self::new_iri(value)
+    }
+}
+
 /// The insertable type for object, takes only the iri and autofills the id
 #[derive(Insertable, PartialEq, Eq, Hash)]
 #[diesel(table_name=objects)]
 #[diesel(check_for_backend(Pg))]
 pub struct NewObject {
+    pub(crate) id: i64,
     pub(crate) value: String,
     pub(crate) kind: ObjectKind,
 }
 
 impl NewObject {
-    pub fn new(iri: String) -> Self {
+    pub(crate) fn from_key(key: ObjectKey, id: i64) -> Self {
         Self {
-            value: iri,
-            kind: ObjectKind::Iri,
+            id,
+            value: key.value,
+            kind: key.kind,
         }
-    }
-}
-
-impl From<&str> for NewObject {
-    fn from(value: &str) -> Self {
-        Self::new(value.to_string())
     }
 }
 
