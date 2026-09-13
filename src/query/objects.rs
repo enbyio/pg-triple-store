@@ -33,14 +33,8 @@ impl TripleStore {
                 return Ok(existing);
             }
 
-            use crate::schema::entities;
-
-            let new_id: i64 = diesel::insert_into(entities::table)
-                .values(NewEntity {
-                    entity_type: OBJECT_ENTITY_TYPE,
-                })
-                .returning(entities::id)
-                .get_result(conn)?;
+            let new_id: i64 =
+                self.add_entity_with_session(crate::model::entity::EntityType::Object, conn)?;
 
             diesel::insert_into(objects)
                 .values(NewObject::from_key(key, new_id))
@@ -97,14 +91,10 @@ impl TripleStore {
                     missing.push(k.clone());
                 }
             }
-
-            use crate::schema::entities;
             // mint entity ids for the missing ones, then insert objects
             for k in missing {
-                let new_id: i64 = diesel::insert_into(entities::table)
-                    .values(NewEntity { entity_type: 1 })
-                    .returning(entities::id)
-                    .get_result(conn)?;
+                let new_id: i64 =
+                    self.add_entity_with_session(crate::model::entity::EntityType::Object, conn)?;
                 diesel::insert_into(objects)
                     .values(NewObject::from_key(k.clone(), new_id))
                     .execute(conn)?;

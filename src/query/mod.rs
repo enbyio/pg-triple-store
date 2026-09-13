@@ -1,7 +1,9 @@
 pub(crate) mod describe;
+pub(crate) mod entities;
 pub(crate) mod filter;
 pub(crate) mod objects;
 pub(crate) mod predicates;
 pub(crate) mod prefixes;
+pub(crate) mod quoted;
 pub mod solution;
 pub(crate) mod triples;
