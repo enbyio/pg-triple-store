@@ -8,7 +8,7 @@ use crate::model::object::NewObject;
 use crate::model::predicate::NewPredicate;
 use crate::model::property::Property;
 use crate::model::relation::Relation;
-use crate::model::triple::{AsIri, LiteralMatchMode, Term, TriplePosition};
+use crate::model::triple::{AsIri, LiteralMatchMode, RelationOrProperty, Term, TriplePosition};
 use crate::query::solution::{Solution, SolutionBuilder};
 use crate::store::{PgPooledConnection, TripleStore};
 
@@ -79,29 +79,39 @@ impl TripleStore {
         Ok(())
     }
 
-    pub(crate) fn upsert_triple(&self, triple: Triple) -> Result<(), StoreError> {
+    pub(crate) fn upsert_triple(&self, triple: Triple) -> Result<RelationOrProperty, StoreError> {
         let subject_id = self.upsert_object(triple.subject.as_iri()?)?;
         let predicate_id = self.upsert_predicate(triple.predicate.as_str())?;
         match triple.object {
             oxrdf::Term::NamedNode(object) => {
                 let object_id = self.upsert_object(object.as_str())?;
-                self.create_relation_triple(Relation::new(subject_id, predicate_id, object_id))?;
+                let relation = Relation::new(subject_id, predicate_id, object_id);
+                self.create_relation_triple(relation)?;
+                Ok(RelationOrProperty::Relation(relation))
             }
             oxrdf::Term::Literal(literal) => {
-                self.create_property_triple(Property::new(
+                let property = Property::new(
                     subject_id,
                     predicate_id,
                     literal.value().to_string(),
-                    Some(literal.datatype().to_string()),
-                ))?;
+                    Some(literal.datatype().to_string()));
+                self.create_property_triple(property.clone());
+                Ok(RelationOrProperty::Property(property))
             }
-            _ => {
+            oxrdf::Term::Triple(nested_triple) => {
+                let nested = nested_triple.as_ref();
+                self.upsert_triple(nested.clone())?;
+
+
+                todo!()
+
+            }
+            oxrdf::Term::BlankNode(_) => {
                 return Err(StoreError::sparql_error(
-                    "Blank Node and Triples in Triples are not supported yet",
+                    "Blank Nodes are not supported yet",
                 ));
             }
         }
-        Ok(())
     }
 
     pub(crate) fn batch_upsert_triples(&self, triples: &[Triple]) -> Result<(), StoreError> {
