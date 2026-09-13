@@ -5,7 +5,7 @@ use diesel::Selectable;
 use crate::model::quoted_property::QuotedProperty;
 use crate::schema::properties;
 
-#[derive(Insertable, Queryable, Selectable, Debug)]
+#[derive(Insertable, Queryable, Selectable, Debug, Clone)]
 #[diesel(table_name=properties)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Property {

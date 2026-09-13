@@ -1,9 +1,10 @@
 use diesel::deserialize::Queryable;
+use diesel::prelude::Insertable;
 use diesel::Selectable;
 
 use crate::schema::quoted_relations;
 
-#[derive(Queryable, Selectable, Debug, Hash)]
+#[derive(Insertable, Queryable, Selectable, Debug, Hash)]
 #[diesel(table_name=quoted_relations)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct QuotedRelation {

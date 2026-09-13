@@ -3,6 +3,14 @@ use std::fmt::Display;
 use oxrdf::NamedOrBlankNode;
 
 use crate::error::StoreError;
+use crate::model::property::Property;
+use crate::model::relation::Relation;
+
+// TODO: there has to be a better way for this
+pub enum RelationOrProperty {
+    Property(Property),
+    Relation(Relation),
+}
 
 #[derive(Default, PartialEq, Eq)]
 pub enum LiteralMatchMode {
