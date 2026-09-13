@@ -3,5 +3,7 @@ pub(crate) mod object;
 pub(crate) mod predicate;
 pub(crate) mod prefix;
 pub(crate) mod property;
+pub(crate) mod quoted_property;
+pub(crate) mod quoted_relation;
 pub(crate) mod relation;
 pub(crate) mod triple;
