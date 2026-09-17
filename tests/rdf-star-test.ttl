@@ -1,26 +1,78 @@
+VERSION "1.2"
+
 @prefix ex:  <http://example.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-# ── Metadata about facts (RDF-star quoted triples) ────────────────────────────
+# ── People ────────────────────────────────────────────────────────────────────
+ex:alice ex:knows    ex:bob ;
+         ex:knows    ex:carol ;
+         ex:name     "Alice" ;
+         ex:age      "30"^^xsd:integer ;
+         ex:score    "9.5"^^xsd:decimal .
 
-<<ex:alice ex:knows ex:bob>>
-    ex:certainty   "0.9"^^xsd:decimal ;
-    ex:assertedBy  ex:carol ;
-    ex:assertedOn  "2024-01-15"^^xsd:date .
+ex:bob   ex:knows    ex:carol ;
+         ex:knows    ex:dave ;
+         ex:name     "Bob" ;
+         ex:age      "25"^^xsd:integer ;
+         ex:score    "7.0"^^xsd:decimal .
 
-<<ex:bob ex:worksAt ex:orgA>>
-    ex:certainty   "1.0"^^xsd:decimal ;
-    ex:source      ex:hrDatabase .
+ex:carol ex:knows    ex:dave ;
+         ex:name     "Carol" ;
+         ex:age      "25"^^xsd:integer ;
+         ex:score    "8.0"^^xsd:decimal .
 
-<<ex:carol ex:knows ex:dave>>
-    ex:certainty   "0.6"^^xsd:decimal ;
-    ex:disputedBy  ex:alice .
+# Dave intentionally has no age or score so BOUND() tests work.
+ex:dave  ex:name     "Dave" .
 
-<<ex:alice ex:worksAt ex:orgA>>
-    ex:certainty   "0.75"^^xsd:decimal ;
-    ex:assertedBy  ex:bob .
+# ── Organisations ─────────────────────────────────────────────────────────────
+ex:alice ex:worksAt  ex:orgA .
+ex:bob   ex:worksAt  ex:orgA .
+ex:carol ex:worksAt  ex:orgB .
 
-# ── A nested quoted triple (metadata about metadata) ──────────────────────────
+ex:orgA  ex:partOf   ex:consortium .
+ex:orgB  ex:partOf   ex:consortium .
 
-<<<<ex:alice ex:knows ex:bob>> ex:certainty "0.9"^^xsd:decimal>>
-    ex:statedIn  ex:report1 .
+# ── Reification / triple-term test data ───────────────────────────────────────
+
+# 1. Explicit reifier + explicit triple term, written directly with rdf:reifies.
+ex:claim1
+    rdf:reifies  <<( ex:alice ex:knows ex:bob )>> ;
+    ex:certainty "0.9"^^xsd:decimal ;
+    ex:assertedBy ex:carol .
+
+# 2. A second, independent reifier for the SAME triple term
+#    (demonstrates that a triple term is a value, reusable by multiple reifiers).
+ex:claim2
+    rdf:reifies  <<( ex:alice ex:knows ex:bob )>> ;
+    ex:certainty "0.4"^^xsd:decimal ;
+    ex:assertedBy ex:dave .
+
+# 3. Reified-triple shorthand with an explicit (named) reifier.
+<< ex:bob ex:worksAt ex:orgA ~ ex:employmentRecord1 >> .
+ex:employmentRecord1
+    ex:source     ex:hrDatabase ;
+    ex:certainty  "1.0"^^xsd:decimal .
+
+# 4. Reified-triple shorthand with an implicit (blank-node) reifier,
+#    used purely to test triple terms without needing a named reifier.
+<< ex:carol ex:worksAt ex:orgB >> .
+
+# 5. Annotation syntax: asserts the base triple AND creates a reifier + metadata
+#    in one statement.
+ex:carol ex:knows ex:dave
+    ~ ex:claim3 {|
+        ex:certainty  "0.6"^^xsd:decimal ;
+        ex:disputedBy ex:alice
+    |} .
+
+# 6. Annotation syntax with an anonymous reifier (no explicit name after ~).
+ex:alice ex:knows ex:carol {|
+    ex:certainty "0.8"^^xsd:decimal
+|} .
+
+# 7. A triple term nested as the object of another triple term
+#    (tests recursive triple-term handling).
+ex:claim4
+    rdf:reifies <<( ex:claim1 ex:supersedes <<( ex:alice ex:knows ex:bob )>> )>> ;
+    ex:certainty "0.95"^^xsd:decimal .
