@@ -4,7 +4,7 @@ use diesel::pg::Pg;
 use diesel::prelude::Insertable;
 use diesel::sql_types::Text;
 use diesel::Selectable;
-use oxrdf::NamedOrBlankNode;
+use oxrdf::{BlankNode, NamedNode, NamedOrBlankNode};
 
 use crate::schema::objects;
 
@@ -92,6 +92,18 @@ impl From<&NamedOrBlankNode> for ObjectKey {
             NamedOrBlankNode::NamedNode(named_node) => ObjectKey::new_iri(named_node.as_str()),
             NamedOrBlankNode::BlankNode(blank_node) => ObjectKey::new_blank(blank_node.as_str()),
         }
+    }
+}
+
+impl From<&NamedNode> for ObjectKey {
+    fn from(value: &NamedNode) -> Self {
+        ObjectKey::new_iri(value.as_str())
+    }
+}
+
+impl From<&BlankNode> for ObjectKey {
+    fn from(value: &BlankNode) -> Self {
+        ObjectKey::new_blank(value.as_str())
     }
 }
 
