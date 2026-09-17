@@ -6,7 +6,7 @@ use crate::store::{PgPooledConnection, TripleStore};
 
 impl TripleStore {
     // TODO: maybe rename this?
-    pub fn add_entity_with_session(
+    pub(crate) fn add_entity_with_session(
         &self,
         entity_type: EntityType,
         conn: &mut PgPooledConnection,
