@@ -2,15 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use diesel::sql_types::BigInt;
 use diesel::{
-    BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
-    sql_query,
+    sql_query, BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl,
+    RunQueryDsl,
 };
 
 use crate::error::StoreError;
 use crate::model::object::{NewObject, ObjectKey};
 use crate::store::TripleStore;
-
-const OBJECT_ENTITY_TYPE: i16 = 1;
 
 impl TripleStore {
     /// Checks if an object with a given iri exists and if not inserts it. ID of the object is returned regardless

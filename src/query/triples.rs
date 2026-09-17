@@ -98,7 +98,7 @@ impl TripleStore {
                     literal.value().to_string(),
                     Some(literal.datatype().to_string()),
                 );
-                self.create_property_triple(property.clone());
+                _ = self.create_property_triple(property.clone());
                 Ok(RelationOrProperty::Property(property))
             }
             oxrdf::Term::Triple(nested_triple) => {
@@ -112,9 +112,9 @@ impl TripleStore {
                 Ok(RelationOrProperty::Relation(relation))
             }
             oxrdf::Term::BlankNode(_) => {
-                return Err(StoreError::sparql_error(
+                Err(StoreError::sparql_error(
                     "Blank Nodes are not supported yet",
-                ));
+                ))
             }
         }
     }
