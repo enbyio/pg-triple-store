@@ -13,7 +13,8 @@ impl TripleStore {
 
     /// Function to insert a single triple. Takes anything that can implements Into<oxrdf::Triple>.
     pub fn insert_triple(&self, triple: impl Into<Triple>) -> Result<(), StoreError> {
-        self.upsert_triple(triple.into())
+        _ = self.upsert_triple(triple.into())?;
+        Ok(())
     }
 
     /// Function to insert a slice of type oxrdf::Triple. \
