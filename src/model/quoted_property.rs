@@ -1,10 +1,8 @@
-use diesel::Selectable;
 use diesel::deserialize::Queryable;
 use diesel::prelude::Insertable;
+use diesel::Selectable;
 
 use crate::schema::quoted_properties;
-
-pub(crate) const QUOTED_PROPERTY_ENTITY_TYPE: i16 = 3;
 
 #[derive(Insertable, Queryable, Selectable, Debug, Hash)]
 #[diesel(table_name=quoted_properties)]

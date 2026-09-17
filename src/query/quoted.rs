@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use diesel::sql_types::BigInt;
 use diesel::{
-    BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
-    sql_query,
+    sql_query, BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl,
+    RunQueryDsl,
 };
 
 use crate::error::StoreError;
@@ -88,7 +88,7 @@ impl TripleStore {
             }
 
             let new_id: i64 = self
-                .add_entity_with_session(crate::model::entity::EntityType::QuotedProperty, conn)?;
+                .add_entity_with_session(crate::model::entity::EntityType::QuotedRelation, conn)?;
 
             diesel::insert_into(quoted_relations)
                 .values(relation.quote(new_id))
