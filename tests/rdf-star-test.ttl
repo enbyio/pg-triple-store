@@ -1,0 +1,26 @@
+@prefix ex:  <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ── Metadata about facts (RDF-star quoted triples) ────────────────────────────
+
+<<ex:alice ex:knows ex:bob>>
+    ex:certainty   "0.9"^^xsd:decimal ;
+    ex:assertedBy  ex:carol ;
+    ex:assertedOn  "2024-01-15"^^xsd:date .
+
+<<ex:bob ex:worksAt ex:orgA>>
+    ex:certainty   "1.0"^^xsd:decimal ;
+    ex:source      ex:hrDatabase .
+
+<<ex:carol ex:knows ex:dave>>
+    ex:certainty   "0.6"^^xsd:decimal ;
+    ex:disputedBy  ex:alice .
+
+<<ex:alice ex:worksAt ex:orgA>>
+    ex:certainty   "0.75"^^xsd:decimal ;
+    ex:assertedBy  ex:bob .
+
+# ── A nested quoted triple (metadata about metadata) ──────────────────────────
+
+<<<<ex:alice ex:knows ex:bob>> ex:certainty "0.9"^^xsd:decimal>>
+    ex:statedIn  ex:report1 .

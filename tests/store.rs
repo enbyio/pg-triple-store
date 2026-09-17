@@ -147,3 +147,15 @@ fn test_add_prefix() {
     let store = init_store();
     store.add_prefix("http://local-test.org", "lt").unwrap()
 }
+
+#[test]
+fn test_rdf_star_import() {
+    let _ = env_logger::Builder::from_default_env()
+        .filter(None, log::LevelFilter::Debug)
+        .try_init();
+    let store = TripleStore::new_from_env().expect("DB connection failed");
+    store.reset_db().expect("reset failed");
+    store
+        .import_turtle_file("tests/rdf-star-test.ttl")
+        .expect("turtle import failed");
+}
