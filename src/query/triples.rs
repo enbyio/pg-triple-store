@@ -2,14 +2,16 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
 use ordermap::OrderSet;
-use oxrdf::{Term, Triple};
+use oxrdf::Triple;
+
+use crate::model;
 
 use crate::error::StoreError;
-use crate::model::object::{NewObject, ObjectKey};
+use crate::model::object::ObjectKey;
 use crate::model::predicate::NewPredicate;
 use crate::model::property::Property;
 use crate::model::relation::Relation;
-use crate::model::triple::{AsIri, LiteralMatchMode, RelationOrProperty, Term, TriplePosition};
+use crate::model::triple::{LiteralMatchMode, RelationOrProperty, TriplePosition};
 use crate::query::solution::{Solution, SolutionBuilder};
 use crate::store::{PgPooledConnection, TripleStore};
 
@@ -121,7 +123,7 @@ impl TripleStore {
     pub(crate) fn batch_upsert_triples(&self, triples: &[Triple]) -> Result<(), StoreError> {
         let mut predicates: HashSet<NewPredicate> = HashSet::new();
         let mut objects: HashSet<ObjectKey> = HashSet::new();
-        let mut triples: Vec<(ObjectKey, String, Term, bool)> = flatten_triples(triples)
+        let mut triples: Vec<(ObjectKey, String, oxrdf::Term, bool)> = flatten_triples(triples)
             .into_iter()
             .rev()
             .map(|(triple, quote)| {
@@ -158,19 +160,19 @@ impl TripleStore {
                 .get(&predicate_key)
                 .expect("This should programmatically never happen, please report.");
             match object_term {
-                Term::NamedNode(named_node) => {
+                oxrdf::Term::NamedNode(named_node) => {
                     let object = *object_ids
                         .get(&ObjectKey::new_iri(named_node.as_str()))
                         .expect("This should programmatically never happen, please report.");
                     pending_relations.push(Relation::new(subject, predicate, object));
                 }
-                Term::BlankNode(blank_node) => {
+                oxrdf::Term::BlankNode(blank_node) => {
                     let object = *object_ids
                         .get(&ObjectKey::new_blank(blank_node.as_str()))
                         .expect("This should programmatically never happen, please report.");
                     pending_relations.push(Relation::new(subject, predicate, object));
                 }
-                Term::Literal(literal) => {
+                oxrdf::Term::Literal(literal) => {
                     pending_properties.push(Property::new(
                         subject,
                         predicate,
@@ -178,7 +180,7 @@ impl TripleStore {
                         Some(literal.datatype().to_string()),
                     ));
                 }
-                Term::Triple(triple) => {
+                oxrdf::Term::Triple(triple) => {
                     let triple = triple.as_ref().clone();
                 }
             }
@@ -278,7 +280,7 @@ pub(crate) fn query_relation_triples(
             let iris: Vec<String> = terms
                 .iter()
                 .filter_map(|t| match t {
-                    Term::Iri(s) => Some(s.clone()),
+                    model::triple::Term::Iri(s) => Some(s.clone()),
                     _ => None,
                 })
                 .collect();
@@ -299,7 +301,7 @@ pub(crate) fn query_relation_triples(
             let iris: Vec<String> = terms
                 .iter()
                 .filter_map(|t| match t {
-                    Term::Iri(s) => Some(s.clone()),
+                    model::triple::Term::Iri(s) => Some(s.clone()),
                     _ => None,
                 })
                 .collect();
@@ -319,7 +321,7 @@ pub(crate) fn query_relation_triples(
             let iris: Vec<String> = terms
                 .iter()
                 .filter_map(|t| match t {
-                    Term::Iri(s) => Some(s.clone()),
+                    model::triple::Term::Iri(s) => Some(s.clone()),
                     _ => None,
                 })
                 .collect();
@@ -367,7 +369,7 @@ pub(crate) fn query_property_triples(
             let iris: Vec<String> = terms
                 .iter()
                 .filter_map(|t| match t {
-                    Term::Iri(s) => Some(s.clone()),
+                    model::triple::Term::Iri(s) => Some(s.clone()),
                     _ => None,
                 })
                 .collect();
@@ -387,7 +389,7 @@ pub(crate) fn query_property_triples(
             let iris: Vec<String> = terms
                 .iter()
                 .filter_map(|t| match t {
-                    Term::Iri(s) => Some(s.clone()),
+                    model::triple::Term::Iri(s) => Some(s.clone()),
                     _ => None,
                 })
                 .collect();
@@ -412,7 +414,7 @@ pub(crate) fn query_property_triples(
             let iris: Vec<String> = terms
                 .iter()
                 .filter_map(|t| match t {
-                    Term::Literal { value, .. } => Some(value.clone()),
+                    model::triple::Term::Literal { value, .. } => Some(value.clone()),
                     _ => None,
                 })
                 .collect();
