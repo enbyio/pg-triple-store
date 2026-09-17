@@ -9,6 +9,7 @@ diesel = { version = "2.3.12", features = ["postgres", "r2d2"] }
 diesel_migrations = "2.3.2"
 dotenvy = "0.15.7"
 log = "0.4.33"
+ordermap = "1.2.2"
 oxrdf = { version = "0.3.3", features = ["rdf-12"] }
 oxrdfxml = { version = "0.2.4", features = ["rdf-12"] }
 oxttl = { version = "0.2.3", features = ["rdf-12"] }

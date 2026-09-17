@@ -7,7 +7,6 @@ use diesel::{
 };
 
 use crate::error::StoreError;
-use crate::model::entity::NewEntity;
 use crate::model::object::{NewObject, ObjectKey};
 use crate::store::TripleStore;
 
@@ -64,7 +63,7 @@ impl TripleStore {
     pub(crate) fn batch_upsert_objects(
         &self,
         keys: HashSet<ObjectKey>,
-    ) -> Result<HashMap<String, i64>, StoreError> {
+    ) -> Result<HashMap<ObjectKey, i64>, StoreError> {
         use crate::schema::objects::dsl::*;
         let mut conn = self.conn()?;
         conn.transaction(|conn| {
@@ -77,7 +76,7 @@ impl TripleStore {
             }
 
             // find which already exist
-            let mut result: HashMap<String, i64> = HashMap::new();
+            let mut result: HashMap<ObjectKey, i64> = HashMap::new();
             let mut missing: Vec<ObjectKey> = Vec::new();
             for k in sorted_keys {
                 if let Some(existing_id) = objects
@@ -86,7 +85,7 @@ impl TripleStore {
                     .first::<i64>(conn)
                     .optional()?
                 {
-                    result.insert(k.value, existing_id);
+                    result.insert(k, existing_id);
                 } else {
                     missing.push(k.clone());
                 }
@@ -98,7 +97,7 @@ impl TripleStore {
                 diesel::insert_into(objects)
                     .values(NewObject::from_key(k.clone(), new_id))
                     .execute(conn)?;
-                result.insert(k.value, new_id);
+                result.insert(k, new_id);
             }
 
             Ok(result)

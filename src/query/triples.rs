@@ -1,10 +1,11 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, VecDeque};
 
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods, alias};
-use oxrdf::Triple;
+use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use ordermap::OrderSet;
+use oxrdf::{Term, Triple};
 
 use crate::error::StoreError;
-use crate::model::object::NewObject;
+use crate::model::object::{NewObject, ObjectKey};
 use crate::model::predicate::NewPredicate;
 use crate::model::property::Property;
 use crate::model::relation::Relation;
@@ -80,7 +81,7 @@ impl TripleStore {
     }
 
     pub(crate) fn upsert_triple(&self, triple: Triple) -> Result<RelationOrProperty, StoreError> {
-        let subject_id = self.upsert_object(triple.subject.as_iri()?)?;
+        let subject_id = self.upsert_object(ObjectKey::from(&triple.subject))?;
         let predicate_id = self.upsert_predicate(triple.predicate.as_str())?;
         match triple.object {
             oxrdf::Term::NamedNode(object) => {
@@ -94,17 +95,20 @@ impl TripleStore {
                     subject_id,
                     predicate_id,
                     literal.value().to_string(),
-                    Some(literal.datatype().to_string()));
+                    Some(literal.datatype().to_string()),
+                );
                 self.create_property_triple(property.clone());
                 Ok(RelationOrProperty::Property(property))
             }
             oxrdf::Term::Triple(nested_triple) => {
                 let nested = nested_triple.as_ref();
-                self.upsert_triple(nested.clone())?;
-
-
-                todo!()
-
+                let object_id = match self.upsert_triple(nested.clone())? {
+                    RelationOrProperty::Property(property) => self.quote_property(property)?,
+                    RelationOrProperty::Relation(relation) => self.quote_relation(relation)?,
+                };
+                let relation = Relation::new(subject_id, predicate_id, object_id);
+                self.create_relation_triple(relation)?;
+                Ok(RelationOrProperty::Relation(relation))
             }
             oxrdf::Term::BlankNode(_) => {
                 return Err(StoreError::sparql_error(
@@ -116,21 +120,71 @@ impl TripleStore {
 
     pub(crate) fn batch_upsert_triples(&self, triples: &[Triple]) -> Result<(), StoreError> {
         let mut predicates: HashSet<NewPredicate> = HashSet::new();
-        let mut objects: HashSet<NewObject> = HashSet::new();
-        for triple in triples {
-            objects.insert(triple.subject.as_iri()?.into());
-            predicates.insert(triple.predicate.as_str().into());
-            if let oxrdf::Term::NamedNode(val) = &triple.object {
-                objects.insert(val.as_str()./*to_string().as_str().*/into());
-            }
-        }
+        let mut objects: HashSet<ObjectKey> = HashSet::new();
+        let mut triples: Vec<(ObjectKey, String, Term, bool)> = flatten_triples(triples)
+            .into_iter()
+            .rev()
+            .map(|(triple, quote)| {
+                let object = ObjectKey::from(&triple.subject);
+                objects.insert(object.clone());
+                let predicate = triple.predicate.as_str().to_string();
+                predicates.insert(predicate.as_str().into());
+                match &triple.object {
+                    oxrdf::Term::NamedNode(named_node) => {
+                        _ = objects.insert(ObjectKey::new_iri(named_node.as_str()))
+                    }
+                    oxrdf::Term::BlankNode(blank_node) => {
+                        _ = objects.insert(ObjectKey::new_blank(blank_node.as_str()))
+                    }
+                    _ => (),
+                }
+                (object, predicate, triple.object, quote)
+            })
+            .collect();
         log::info!("Found {} unique objects", objects.len());
         log::info!("Found {} unique predicates", predicates.len());
         let predicate_ids = self.batch_upsert_predicates(predicates)?;
         let object_ids = self.batch_upsert_objects(objects)?;
-        let mut relations: Vec<Relation> = Vec::new();
-        let mut properties: Vec<Property> = Vec::new();
-        for triple in triples {
+        let mut quoted_ids = HashMap::<RelationOrProperty, i64>::new();
+        let mut pending_quotes = HashSet::<RelationOrProperty>::new();
+        let mut pending_relations: Vec<Relation> = Vec::new();
+        let mut pending_properties: Vec<Property> = Vec::new();
+        while !triples.is_empty() {
+            let (subject_key, predicate_key, object_term, quote) = triples.pop().unwrap();
+            let subject = *object_ids
+                .get(&subject_key)
+                .expect("This should programmatically never happen, please report.");
+            let predicate = *predicate_ids
+                .get(&predicate_key)
+                .expect("This should programmatically never happen, please report.");
+            match object_term {
+                Term::NamedNode(named_node) => {
+                    let object = *object_ids
+                        .get(&ObjectKey::new_iri(named_node.as_str()))
+                        .expect("This should programmatically never happen, please report.");
+                    pending_relations.push(Relation::new(subject, predicate, object));
+                }
+                Term::BlankNode(blank_node) => {
+                    let object = *object_ids
+                        .get(&ObjectKey::new_blank(blank_node.as_str()))
+                        .expect("This should programmatically never happen, please report.");
+                    pending_relations.push(Relation::new(subject, predicate, object));
+                }
+                Term::Literal(literal) => {
+                    pending_properties.push(Property::new(
+                        subject,
+                        predicate,
+                        literal.value().to_string(),
+                        Some(literal.datatype().to_string()),
+                    ));
+                }
+                Term::Triple(triple) => {
+                    let triple = triple.as_ref().clone();
+                }
+            }
+        }
+        Ok(())
+        /* for triple in triples {
             if let Some(&subject) = object_ids.get(triple.subject.as_iri()?)
                 && let Some(&predicate) = predicate_ids.get(triple.predicate.as_str())
             {
@@ -156,8 +210,35 @@ impl TripleStore {
         }
         self.batch_create_relation_triples(&relations)?;
         self.batch_create_property_triples(&properties)?;
-        Ok(())
+        Ok(()) */
     }
+}
+
+// bool in the tuple represents whether to quote the triple or not
+fn flatten_triples(triples: &[Triple]) -> Vec<(Triple, bool)> {
+    let mut all_triples: VecDeque<Triple> = VecDeque::new();
+    let mut triples_to_quote: HashSet<Triple> = HashSet::new();
+    let mut pending_triples: VecDeque<Triple> = VecDeque::from(triples.to_vec());
+    while !pending_triples.is_empty() {
+        let triple = pending_triples.pop_front().unwrap(); // unwrap since this should never be reached
+        if let oxrdf::Term::Triple(nested_triple) = &triple.object {
+            let nested_triple = nested_triple.as_ref().clone();
+            triples_to_quote.insert(nested_triple.clone());
+            pending_triples.push_back(nested_triple);
+        }
+        all_triples.push_back(triple);
+    }
+    let mut set = OrderSet::<Triple>::new();
+    all_triples
+        .into_iter()
+        .rev()
+        .for_each(|t| _ = set.insert(t));
+    set.into_iter()
+        .map(|t| {
+            let quote = triples_to_quote.contains(&t);
+            (t, quote)
+        })
+        .collect()
 }
 
 pub(crate) fn query_relation_triples(

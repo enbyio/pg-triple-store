@@ -1,12 +1,9 @@
-use std::fmt::Display;
-
-use oxrdf::NamedOrBlankNode;
-
-use crate::error::StoreError;
 use crate::model::property::Property;
 use crate::model::relation::Relation;
+use std::fmt::Display;
 
 // TODO: there has to be a better way for this
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum RelationOrProperty {
     Property(Property),
     Relation(Relation),
@@ -60,21 +57,6 @@ impl Display for Term {
                 write!(f, "{value}")
             }
             Term::BlankNode(name) => write!(f, "{name}"),
-        }
-    }
-}
-
-pub trait AsIri {
-    fn as_iri(&self) -> Result<&str, StoreError>;
-}
-
-impl AsIri for NamedOrBlankNode {
-    fn as_iri(&self) -> Result<&str, StoreError> {
-        match self {
-            NamedOrBlankNode::NamedNode(named_node) => Ok(named_node.as_str()),
-            NamedOrBlankNode::BlankNode(_) => Err(StoreError::data_error(
-                "Blank Node is not supported as input data here",
-            )),
         }
     }
 }

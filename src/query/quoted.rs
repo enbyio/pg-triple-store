@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use diesel::sql_types::BigInt;
 use diesel::{
     sql_query, BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl,
@@ -7,10 +9,31 @@ use diesel::{
 use crate::error::StoreError;
 use crate::model::property::Property;
 use crate::model::relation::Relation;
+use crate::model::triple::RelationOrProperty;
 use crate::store::TripleStore;
 
 // functions are internal so for performance reason it is assumed that the property / relation is already in the appropriate table
 impl TripleStore {
+    // TODO: implement actual batching
+    pub(crate) fn batch_quote_triple(
+        &self,
+        triples: Vec<RelationOrProperty>,
+    ) -> Result<HashMap<RelationOrProperty, i64>, StoreError> {
+        let mut map = HashMap::<RelationOrProperty, i64>::new();
+        for triple in triples {
+            let id = self.quote_triple(triple.clone())?;
+            map.entry(triple).or_insert(id);
+        }
+        Ok(map)
+    }
+
+    pub(crate) fn quote_triple(&self, triple: RelationOrProperty) -> Result<i64, StoreError> {
+        match triple {
+            RelationOrProperty::Property(property) => self.quote_property(property),
+            RelationOrProperty::Relation(relation) => self.quote_relation(relation),
+        }
+    }
+
     pub(crate) fn quote_property(&self, property: Property) -> Result<i64, StoreError> {
         use crate::schema::quoted_properties::dsl::*;
         let mut conn = self.conn()?;

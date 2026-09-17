@@ -5,7 +5,7 @@ use diesel::Selectable;
 use crate::model::quoted_relation::QuotedRelation;
 use crate::schema::relations;
 
-#[derive(Insertable, Queryable, Selectable, Debug, Default, Clone, Copy)]
+#[derive(Insertable, Queryable, Selectable, Debug, Default, Clone, Copy, Hash, PartialEq, Eq)]
 #[diesel(table_name=relations)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Relation {
