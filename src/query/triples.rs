@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use diesel::{alias, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl, TextExpressionMethods, alias};
 use oxrdf::Triple;
 
 use crate::model;
@@ -158,7 +158,7 @@ impl TripleStore {
                         } else {
                             log::error!("could not find id for the iri {}", named_node)
                         }
-                    },
+                    }
                     oxrdf::Term::BlankNode(bnode) => {
                         if let Some(&object) = object_ids.get(&ObjectKey::from(bnode)) {
                             relations.push(Relation::new(subject, predicate, object));

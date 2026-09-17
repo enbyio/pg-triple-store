@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use diesel::sql_types::BigInt;
 use diesel::{
-    sql_query, BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl,
-    RunQueryDsl,
+    BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl,
+    sql_query,
 };
 
 use crate::error::StoreError;
