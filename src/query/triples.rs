@@ -111,11 +111,9 @@ impl TripleStore {
                 self.create_relation_triple(relation)?;
                 Ok(RelationOrProperty::Relation(relation))
             }
-            oxrdf::Term::BlankNode(_) => {
-                Err(StoreError::sparql_error(
-                    "Blank Nodes are not supported yet",
-                ))
-            }
+            oxrdf::Term::BlankNode(_) => Err(StoreError::sparql_error(
+                "Blank Nodes are not supported yet",
+            )),
         }
     }
 
