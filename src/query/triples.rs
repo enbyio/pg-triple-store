@@ -34,15 +34,17 @@ impl TripleStore {
     ) -> Result<(), StoreError> {
         use crate::schema::properties::dsl::*;
         let mut conn = self.conn()?;
-        let affected_rows = diesel::insert_into(properties)
-            .values(props)
-            .on_conflict_do_nothing()
-            .execute(&mut conn)?;
-        log::debug!(
-            "BATCH INSERT PROPERTIES for {} elements affected {} rows",
-            props.len(),
-            affected_rows
-        );
+        for chunk in props.chunks(15000) {
+            let affected_rows = diesel::insert_into(properties)
+                .values(chunk)
+                .on_conflict_do_nothing()
+                .execute(&mut conn)?;
+            log::debug!(
+                "BATCH INSERT PROPERTIES for {} elements affected {} rows",
+                chunk.len(),
+                affected_rows
+            );
+        }
         Ok(())
     }
 
@@ -67,15 +69,17 @@ impl TripleStore {
     ) -> Result<(), StoreError> {
         use crate::schema::relations::dsl::*;
         let mut conn = self.conn()?;
-        let affected_rows = diesel::insert_into(relations)
-            .values(rels)
-            .on_conflict_do_nothing()
-            .execute(&mut conn)?;
-        log::debug!(
-            "BATCH INSERT RELATIONS for {} elements affected {} rows",
-            rels.len(),
-            affected_rows
-        );
+        for chunk in rels.chunks(20000) {
+            let affected_rows = diesel::insert_into(relations)
+                .values(chunk)
+                .on_conflict_do_nothing()
+                .execute(&mut conn)?;
+            log::debug!(
+                "BATCH INSERT RELATIONS for {} elements affected {} rows",
+                chunk.len(),
+                affected_rows
+            );
+        }
         Ok(())
     }
 

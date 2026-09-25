@@ -49,15 +49,20 @@ impl TripleStore {
         object_iris: HashSet<NewObject>,
     ) -> Result<HashMap<String, i64>, StoreError> {
         let values: Vec<NewObject> = object_iris.into_iter().collect();
-        let mut conn = self.conn()?;
-        Ok(diesel::insert_into(objects)
-            .values(&values)
-            .on_conflict((kind, value))
-            .do_update()
-            .set(value.eq(value))
-            .returning((value, id))
-            .get_results::<(String, i64)>(&mut conn)?
-            .into_iter()
-            .collect())
+        let mut result_map = HashMap::<String, i64>::new();
+        for chunk in values.chunks(30000) {
+            let mut conn = self.conn()?;
+            let partial_map: HashMap<String, i64> = diesel::insert_into(objects)
+                .values(chunk)
+                .on_conflict((kind, value))
+                .do_update()
+                .set(value.eq(value))
+                .returning((value, id))
+                .get_results::<(String, i64)>(&mut conn)?
+                .into_iter()
+                .collect();
+            result_map.extend(partial_map);
+        }
+        Ok(result_map)
     }
 }
