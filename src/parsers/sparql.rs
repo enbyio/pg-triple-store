@@ -445,6 +445,20 @@ impl TripleStore {
                 }
             } else if shared.is_empty() {
                 let new_rows = self.execute_triple_pattern(pattern)?;
+                let projected = acc
+                    .len()
+                    .checked_mul(new_rows.len())
+                    .ok_or_else(|| StoreError::sparql_error("Cartesian product size overflow"))?;
+
+                const MAX_CARTESIAN_ROWS: usize = 80_000; // tune to your memory budget
+                if projected > MAX_CARTESIAN_ROWS {
+                    return Err(StoreError::sparql_error(format!(
+                        "Query would produce a cartesian product of {} rows (limit is {}); \
+                             rewrite the query to share a variable between these patterns",
+                        projected, MAX_CARTESIAN_ROWS
+                    )));
+                }
+
                 acc = acc
                     .iter()
                     .flat_map(|l| new_rows.iter().map(move |r| merge(l, r)))
